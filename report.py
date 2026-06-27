@@ -48,6 +48,34 @@ def pressure_value(event_or_row):
     return ""
 
 
+def tail_log_lines(path, limit=200):
+    try:
+        if not path.exists():
+            return []
+
+        with path.open("rb") as file:
+            file.seek(0, 2)
+            size = file.tell()
+
+            if size == 0:
+                return []
+
+            chunk_size = 8192
+            buffer = b""
+            position = size
+
+            while position > 0 and buffer.count(b"\n") < limit + 1:
+                step = min(chunk_size, position)
+                position -= step
+                file.seek(position)
+                buffer = file.read(step) + buffer
+
+        lines = buffer.decode("utf-8", errors="replace").splitlines()
+        return [line for line in lines[-limit:] if line.strip()]
+    except OSError:
+        return []
+
+
 def write_report(context):
     events = context["events"]
     sensor_summaries = context["sensor_summaries"]
@@ -82,6 +110,7 @@ def write_report(context):
     watch_count = len([v for v in vehicles if v.get("category") == "watch"])
     ignore_count = len([v for v in vehicles if v.get("category") == "ignore"])
     ignored_vehicles = [v for v in vehicles if v.get("category") == "ignore"]
+    raw_packet_lines = tail_log_lines(LOG_PATH, 200)
 
     html = html_start(generated_at)
 
@@ -110,6 +139,14 @@ def write_report(context):
         onclick="showReportTab('tab-details')"
       >
         Details ({len(recent_pass_rows)})
+      </button>
+      <button
+        type="button"
+        class="tab-button"
+        data-tab-target="tab-raw-packets"
+        onclick="showReportTab('tab-raw-packets')"
+      >
+        Raw Packets ({len(raw_packet_lines)})
       </button>
     </div>
 
@@ -151,6 +188,13 @@ def write_report(context):
     html += sensor_section(sensor_summaries)
     html += recent_events_section(recent_event_rows)
     html += import_stats_section(ingest_stats, prune_stats)
+
+    html += """
+    </div>
+
+    <div id="tab-raw-packets" class="tab-panel">
+"""
+    html += raw_packets_section(raw_packet_lines)
 
     html += """
     </div>
@@ -1094,6 +1138,65 @@ def recent_events_section(rows):
             <td>{safe_text(event["temperature_c"] if event["temperature_c"] is not None else "")}</td>
             <td>{safe_text(event["rssi"] if event["rssi"] is not None else "")}</td>
             <td>{safe_text(event["snr"] if event["snr"] is not None else "")}</td>
+          </tr>
+"""
+
+    html += """
+        </tbody>
+      </table>
+    </div>
+"""
+    return html
+
+
+def raw_packets_section(lines):
+    html = """
+    <div class="section">
+      <h2>Recent Raw Packets</h2>
+      <p class="muted">Newest raw rtl_433 JSONL packets from the active log file. This includes packets that may not be parsed as TPMS events.</p>
+      <div class="toolbar">
+        <input placeholder="Search raw packets..." oninput="filterTable('rawPacketTable', this.value)">
+      </div>
+      <table id="rawPacketTable">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Model</th>
+            <th>ID</th>
+            <th>Raw JSON</th>
+          </tr>
+        </thead>
+        <tbody>
+"""
+
+    for line in reversed(lines):
+        packet_time = ""
+        model = ""
+        packet_id = ""
+
+        try:
+            packet = json.loads(line)
+
+            if isinstance(packet, dict):
+                packet_time = packet.get("time", "")
+                model = packet.get("model", "")
+                packet_id = (
+                    packet.get("id")
+                    or packet.get("sensor_id")
+                    or packet.get("device")
+                    or ""
+                )
+        except json.JSONDecodeError:
+            packet_time = "[malformed]"
+            model = "[malformed]"
+            packet_id = ""
+
+        html += f"""
+          <tr>
+            <td>{safe_text(packet_time)}</td>
+            <td>{safe_text(model)}</td>
+            <td>{safe_text(packet_id)}</td>
+            <td><div class="copybox">{safe_text(line)}</div></td>
           </tr>
 """
 
