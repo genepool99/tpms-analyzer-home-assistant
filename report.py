@@ -81,6 +81,7 @@ def write_report(context):
     known_count = len([v for v in vehicles if v.get("category") == "known"])
     watch_count = len([v for v in vehicles if v.get("category") == "watch"])
     ignore_count = len([v for v in vehicles if v.get("category") == "ignore"])
+    ignored_vehicles = [v for v in vehicles if v.get("category") == "ignore"]
 
     html = html_start(generated_at)
 
@@ -126,6 +127,10 @@ def write_report(context):
         ingest_stats=ingest_stats,
     )
     html += known_vehicle_section(known_vehicle_summaries)
+
+    if ignored_vehicles:
+        html += ignored_vehicle_section(ignored_vehicles)
+
     html += new_unknown_section(new_unknown_candidates)
     html += overlap_candidates_section(overlap_candidate_summaries)
     html += exact_candidates_section(exact_candidate_summaries)
@@ -652,6 +657,83 @@ def known_vehicle_section(rows):
               </div>
             </td>
             <td>{safe_text(row["notes"])}</td>
+          </tr>
+"""
+
+    html += """
+        </tbody>
+      </table>
+    </div>
+"""
+    return html
+
+
+def ignored_vehicle_section(rows):
+    html = """
+    <div class="section">
+      <h2>Ignored Vehicles</h2>
+      <p class="muted">Ignored entries from vehicles.json. Restore one to Known or Watchlist if it should be tracked again.</p>
+      <div class="toolbar">
+        <input placeholder="Search ignored vehicles..." oninput="filterTable('ignoredVehicleTable', this.value)">
+      </div>
+      <table id="ignoredVehicleTable">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Sensor IDs</th>
+            <th>Actions</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+"""
+
+    for row in rows:
+        sensor_ids = row.get("sensor_ids", [])
+        name = row.get("name", "Ignored Vehicle")
+        notes = row.get("notes", "")
+
+        known_payload = {
+            "action": "update_category",
+            "name": name,
+            "category": "known",
+            "notes": notes,
+            "sensor_ids": sensor_ids,
+        }
+
+        watch_payload = {
+            "action": "update_category",
+            "name": name,
+            "category": "watch",
+            "notes": notes,
+            "sensor_ids": sensor_ids,
+        }
+
+        html += f"""
+          <tr>
+            <td>{safe_text(name)}</td>
+            <td>{safe_text(", ".join(sensor_ids))}</td>
+            <td>
+              <div class="action-buttons">
+                <button
+                  type="button"
+                  class="small-action-button known-action"
+                  data-payload="{safe_text(json.dumps(known_payload))}"
+                  onclick="editVehicleMapFromButton(this)"
+                >
+                  Move to Known
+                </button>
+                <button
+                  type="button"
+                  class="small-action-button watch-action"
+                  data-payload="{safe_text(json.dumps(watch_payload))}"
+                  onclick="editVehicleMapFromButton(this)"
+                >
+                  Move to Watch
+                </button>
+              </div>
+            </td>
+            <td>{safe_text(notes)}</td>
           </tr>
 """
 
