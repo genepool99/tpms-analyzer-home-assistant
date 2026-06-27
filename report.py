@@ -431,6 +431,44 @@ def html_start(generated_at):
     .tab-panel.active {{
       display: block;
     }}
+
+    .action-buttons {{
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }}
+
+    .small-action-button {{
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 6px 10px;
+      background: var(--soft);
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      white-space: nowrap;
+    }}
+
+    .small-action-button:hover {{
+      filter: brightness(0.97);
+    }}
+
+    .small-action-button:disabled {{
+      opacity: 0.6;
+      cursor: wait;
+    }}
+
+    .watch-action {{
+      background: var(--watch-bg);
+      color: var(--watch-text);
+    }}
+
+    .ignore-action {{
+      background: var(--ignore-bg);
+      color: var(--ignore-text);
+    }}
   </style>
 </head>
 <body>
@@ -571,6 +609,7 @@ def new_unknown_section(rows):
             <th>First Seen</th>
             <th>Last Seen</th>
             <th>Sensor IDs</th>
+            <th>Actions</th>
             <th>Copy/Paste JSON</th>
           </tr>
         </thead>
@@ -578,11 +617,31 @@ def new_unknown_section(rows):
 """
 
     for index, row in enumerate(rows, start=1):
+        candidate_name = f"Unknown Candidate {index}"
+        candidate_notes = f"Generated from TPMS report. Pass count: {row['pass_count']}"
+        sensor_ids = row["sensor_ids"]
+
         snippet = {
-            "name": f"Unknown Candidate {index}",
+            "name": candidate_name,
             "category": "watch",
-            "notes": f"Generated from TPMS report. Pass count: {row['pass_count']}",
-            "sensor_ids": row["sensor_ids"],
+            "notes": candidate_notes,
+            "sensor_ids": sensor_ids,
+        }
+
+        watch_payload = {
+            "action": "add",
+            "name": candidate_name,
+            "category": "watch",
+            "notes": candidate_notes,
+            "sensor_ids": sensor_ids,
+        }
+
+        ignore_payload = {
+            "action": "add",
+            "name": candidate_name,
+            "category": "ignore",
+            "notes": candidate_notes,
+            "sensor_ids": sensor_ids,
         }
 
         html += f"""
@@ -592,7 +651,27 @@ def new_unknown_section(rows):
             <td>{row["sensor_count"]}</td>
             <td>{display_time(row["first_seen"])}</td>
             <td>{display_time(row["last_seen"])}</td>
-            <td>{safe_text(", ".join(row["sensor_ids"]))}</td>
+            <td>{safe_text(", ".join(sensor_ids))}</td>
+            <td>
+              <div class="action-buttons">
+                <button
+                  type="button"
+                  class="small-action-button watch-action"
+                  data-payload="{safe_text(json.dumps(watch_payload))}"
+                  onclick="editVehicleMapFromButton(this)"
+                >
+                  Add Watch
+                </button>
+                <button
+                  type="button"
+                  class="small-action-button ignore-action"
+                  data-payload="{safe_text(json.dumps(ignore_payload))}"
+                  onclick="editVehicleMapFromButton(this)"
+                >
+                  Ignore
+                </button>
+              </div>
+            </td>
             <td><div class="copybox">{safe_text(json.dumps(snippet, indent=2))}</div></td>
           </tr>
 """
@@ -907,6 +986,7 @@ def html_end(timeline_points, daily_counts, hourly_counts):
     const dailyCounts = {json.dumps(daily_counts)};
     const hourlyCounts = {json.dumps(hourly_counts)};
     const refreshWebhookUrl = "/api/webhook/{safe_text(REFRESH_WEBHOOK_ID)}";
+    const vehicleMapEditWebhookUrl = "/api/webhook/tpms-vehicle-map-edit-b8f41c6a9e73";
 
     async function refreshReport() {{
       const button = document.getElementById("refreshButton");
@@ -932,6 +1012,43 @@ def html_end(timeline_points, daily_counts, hourly_counts):
       }} catch (error) {{
         console.error(error);
         button.innerText = "Refresh failed";
+        setTimeout(() => {{
+          button.innerText = originalText;
+          button.disabled = false;
+        }}, 4000);
+      }}
+    }}
+
+    async function editVehicleMapFromButton(button) {{
+      const originalText = button.innerText;
+
+      try {{
+        const payload = JSON.parse(button.dataset.payload || "{{}}");
+
+        button.disabled = true;
+        button.innerText = "Saving...";
+
+        const response = await fetch(vehicleMapEditWebhookUrl, {{
+          method: "POST",
+          headers: {{
+            "Content-Type": "application/json"
+          }},
+          body: JSON.stringify(payload)
+        }});
+
+        if (!response.ok) {{
+          throw new Error(`HTTP ${{response.status}}`);
+        }}
+
+        button.innerText = "Saved";
+
+        setTimeout(() => {{
+          window.location.reload();
+        }}, 2500);
+      }} catch (error) {{
+        console.error(error);
+        button.innerText = "Failed";
+
         setTimeout(() => {{
           button.innerText = originalText;
           button.disabled = false;
