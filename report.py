@@ -1155,11 +1155,6 @@ def charts_section():
     </div>
 
     <div class="section">
-      <h2>Events by Protocol</h2>
-      <div id="protocolChart" class="small-chart"></div>
-    </div>
-
-    <div class="section">
       <h2>Battery Status</h2>
       <div id="batteryChart" class="small-chart"></div>
     </div>
@@ -1682,6 +1677,43 @@ def html_end(timeline_points, daily_counts, hourly_counts):
       );
     }}
 
+    function countByModelWithProtocols(points) {{
+      const models = new Map();
+
+      points.forEach(point => {{
+        const model = categoryValue(point.model);
+        const protocol = categoryValue(point.protocol);
+
+        if (!models.has(model)) {{
+          models.set(model, {{
+            label: model,
+            count: 0,
+            protocols: new Map()
+          }});
+        }}
+
+        const row = models.get(model);
+        row.count += 1;
+        row.protocols.set(protocol, (row.protocols.get(protocol) || 0) + 1);
+      }});
+
+      return Array.from(models.values())
+        .map(row => {{
+          const protocols = Array.from(row.protocols.entries())
+            .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+          const protocolText = protocols.length === 1
+            ? `Protocol: ${{protocols[0][0]}}`
+            : `Protocols: ${{protocols.map(([protocol, count]) => `${{protocol}} (${{count}})`).join(", ")}}`;
+
+          return {{
+            label: row.label,
+            count: row.count,
+            hoverText: `${{row.label}}<br>Events: ${{row.count}}<br>${{protocolText}}`
+          }};
+        }})
+        .sort((a, b) => a.label.localeCompare(b.label));
+    }}
+
     function hourlyCountsFor(points) {{
       const counts = new Map();
 
@@ -1814,7 +1846,9 @@ def html_end(timeline_points, daily_counts, hourly_counts):
       Plotly.newPlot(chartId, [{{
         x: rows.map(row => row.label),
         y: rows.map(row => row.count),
-        type: "bar"
+        type: "bar",
+        text: rows.map(row => row.hoverText || `${{row.label}}<br>Events: ${{row.count}}`),
+        hovertemplate: "%{{text}}<extra></extra>"
       }}], {{
         title,
         xaxis: {{ title: xTitle }},
@@ -1840,7 +1874,6 @@ def html_end(timeline_points, daily_counts, hourly_counts):
         emptyChart("pressureChart", "TPMS pressure values", emptyMessage, "Pressure");
         emptyChart("temperatureChart", "TPMS temperature values", "Not enough temperature data for this time range", "Temperature (°C)");
         emptyChart("modelChart", "Events by model", emptyMessage, "Event count");
-        emptyChart("protocolChart", "Events by protocol", emptyMessage, "Event count");
         emptyChart("batteryChart", "Battery status", emptyMessage, "Event count");
         emptyChart("signalChart", "TPMS signal quality", "Not enough signal data for this time range", "Signal value");
         return;
@@ -1927,17 +1960,8 @@ def html_end(timeline_points, daily_counts, hourly_counts):
       renderBarChart(
         "modelChart",
         "Events by model",
-        countBy(points, point => categoryValue(point.model)),
+        countByModelWithProtocols(points),
         "Model",
-        "Event count",
-        emptyMessage
-      );
-
-      renderBarChart(
-        "protocolChart",
-        "Events by protocol",
-        countBy(points, point => categoryValue(point.protocol)),
-        "Protocol",
         "Event count",
         emptyMessage
       );
