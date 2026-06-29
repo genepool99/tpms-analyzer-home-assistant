@@ -19,13 +19,11 @@ This add-on does not automatically create Home Assistant automations, scripts, s
 
 For scheduled analysis, the report Refresh button, and vehicle labeling actions, follow the copy-paste YAML setup in the project README.
 
-For the current vehicle-labeling bridge, set this add-on option:
+Vehicle labeling works with the default `vehicle_map_path`, `/data/vehicles.json`.
 
-```yaml
-vehicle_map_path: /config/rtl_433/tpms_analyzer/vehicles.json
-```
+The Home Assistant `shell_command` only writes a staging payload file to `/config/rtl_433/tpms_edit_payload.json`. When the add-on starts, it applies that payload internally using `vehicle_map_editor.py` inside the container, removes the staging file, and regenerates the report.
 
-This lets the legacy shell_command write to the same `vehicles.json` the add-on reads. Future versions may replace this bridge with a native add-on endpoint.
+Only change `vehicle_map_path` if you want the vehicle map stored somewhere under `/config` for direct editing, backup, or Git tracking.
 
 ## Requirements
 
@@ -48,7 +46,7 @@ output json:/config/rtl_433/logs/rtl_433.jsonl
 | `log_path` | `/config/rtl_433/logs/rtl_433.jsonl` | Path to the rtl_433 JSONL log file. |
 | `refresh_webhook_id` | `tpms-refresh-report-a8f3c91b7d22` | Webhook ID used by the report's Refresh button to trigger re-analysis. Must match the webhook ID in your HA automation. |
 | `vehicle_map_edit_webhook_id` | `tpms-vehicle-map-edit-b8f41c6a9e73` | Webhook ID used by the report's vehicle labeling actions. Must match the webhook ID in your HA automation. |
-| `vehicle_map_path` | `/data/vehicles.json` | Path to the vehicle map used by the add-on. Keep the default for add-on-private state, or set to `/config/rtl_433/tpms_analyzer/vehicles.json` when using the vehicle-labeling bridge. |
+| `vehicle_map_path` | `/data/vehicles.json` | Path to the vehicle map. The default `/data/vehicles.json` works for all standard use cases, including vehicle labeling. |
 
 ## Viewing the report
 
