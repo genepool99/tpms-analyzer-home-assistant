@@ -425,6 +425,40 @@ def html_start(generated_at):
       color: var(--text);
     }}
 
+    .chart-loading {{
+      display: none;
+      align-items: center;
+      gap: 10px;
+      width: fit-content;
+      margin: -8px 0 16px;
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--info-bg);
+      color: var(--info-text);
+      font-weight: 800;
+    }}
+
+    .chart-loading.active {{
+      display: inline-flex;
+    }}
+
+    .chart-loading::before {{
+      content: "";
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(91, 33, 182, 0.25);
+      border-top-color: var(--info-text);
+      border-radius: 999px;
+      animation: chart-loading-spin 0.8s linear infinite;
+    }}
+
+    @keyframes chart-loading-spin {{
+      to {{
+        transform: rotate(360deg);
+      }}
+    }}
+
     input {{
       padding: 8px 10px;
       border: 1px solid var(--border);
@@ -1119,10 +1153,13 @@ def charts_section():
       <select id="chart-time-filter">
         <option value="all">All data</option>
         <option value="24h">Last 24 hours</option>
-        <option value="7d">Last 7 days</option>
+        <option value="7d" selected>Last 7 days</option>
         <option value="30d">Last 30 days</option>
       </select>
       <span class="muted">Filters charts using event timestamps from this report.</span>
+    </div>
+    <div id="charts-loading" class="chart-loading" role="status" aria-live="polite" aria-hidden="true">
+      Rendering charts...
     </div>
 
     <div class="section">
@@ -1444,6 +1481,7 @@ def html_end(timeline_points, daily_counts, hourly_counts):
     const allTimelinePoints = {json.dumps(timeline_points)};
     const refreshWebhookUrl = "/api/webhook/{safe_text(REFRESH_WEBHOOK_ID)}";
     const vehicleMapEditWebhookUrl = "/api/webhook/tpms-vehicle-map-edit-b8f41c6a9e73";
+    const PRESSURE_SUSPICIOUS_PSI = 120;
 
     async function refreshReport() {{
       const button = document.getElementById("refreshButton");
@@ -1565,11 +1603,43 @@ def html_end(timeline_points, daily_counts, hourly_counts):
     makeTablesSortable();
 
     let chartsRendered = false;
+    let chartsRenderPending = false;
+
+    function setChartsLoading(isLoading) {{
+      const loading = document.getElementById("charts-loading");
+
+      if (!loading) return;
+
+      loading.classList.toggle("active", isLoading);
+      loading.setAttribute("aria-hidden", isLoading ? "false" : "true");
+    }}
+
+    function renderChartsSoon() {{
+      if (chartsRenderPending) return;
+
+      chartsRendered = true;
+      chartsRenderPending = true;
+      setChartsLoading(true);
+
+      const runRender = () => {{
+        try {{
+          renderCharts();
+        }} finally {{
+          chartsRenderPending = false;
+          setChartsLoading(false);
+        }}
+      }};
+
+      if (window.requestAnimationFrame) {{
+        requestAnimationFrame(() => setTimeout(runRender, 0));
+      }} else {{
+        setTimeout(runRender, 0);
+      }}
+    }}
 
     function ensureChartsRendered() {{
       if (!chartsRendered) {{
-        renderCharts();
-        chartsRendered = true;
+        renderChartsSoon();
       }}
     }}
 
@@ -1768,8 +1838,6 @@ def html_end(timeline_points, daily_counts, hourly_counts):
       return Number.isFinite(number) ? number : null;
     }}
 
-    const PRESSURE_SUSPICIOUS_PSI = 120;
-
     function pressurePointValue(point) {{
       const pressurePsi = numericValue(point.pressure_psi);
 
@@ -1966,6 +2034,20 @@ def html_end(timeline_points, daily_counts, hourly_counts):
       }});
     }}
 
+    function renderChartSafely(chartId, chartTitle, yAxisTitle, renderFn) {{
+      try {{
+        renderFn();
+      }} catch (error) {{
+        console.error(`${{chartTitle}} failed to render`, error);
+
+        try {{
+          emptyChart(chartId, chartTitle, "Chart failed to render; check browser console", yAxisTitle);
+        }} catch (emptyError) {{
+          console.error(`${{chartTitle}} error annotation failed to render`, emptyError);
+        }}
+      }}
+    }}
+
     function renderBarChart(chartId, title, rows, xTitle, yTitle, emptyMessage) {{
       if (!rows.length) {{
         emptyChart(chartId, title, emptyMessage, yTitle);
@@ -1994,105 +2076,131 @@ def html_end(timeline_points, daily_counts, hourly_counts):
 
       if (!points.length) {{
         updatePressureChartNote(0);
-        emptyChart("timelineChart", "TPMS detections by sensor ID", emptyMessage, "TPMS Sensor ID");
-        emptyChart("dailyChart", "TPMS events per day", emptyMessage, "Event count");
-        emptyChart("hourlyChart", "TPMS events by hour of day", emptyMessage, "Event count");
-        emptyChart("pressureChart", "TPMS pressure values, normalized to PSI", emptyMessage, "Pressure (PSI)");
-        emptyChart("temperatureChart", "TPMS temperature values", "Not enough temperature data for this time range", "Temperature (°C)");
-        emptyChart("modelChart", "Events by model", emptyMessage, "Event count");
-        emptyChart("batteryChart", "Confirmed Battery Status", emptyMessage, "Event count");
-        emptyChart("maybeBatteryChart", "Unconfirmed battery signal", "Not enough maybe_battery data for this time range", "maybe_battery raw value");
-        emptyChart("signalChart", "TPMS signal quality", "Not enough signal data for this time range", "Signal value");
+        renderChartSafely("timelineChart", "TPMS detections by sensor ID", "TPMS Sensor ID", () => {{
+          emptyChart("timelineChart", "TPMS detections by sensor ID", emptyMessage, "TPMS Sensor ID");
+        }});
+        renderChartSafely("dailyChart", "TPMS events per day", "Event count", () => {{
+          emptyChart("dailyChart", "TPMS events per day", emptyMessage, "Event count");
+        }});
+        renderChartSafely("hourlyChart", "TPMS events by hour of day", "Event count", () => {{
+          emptyChart("hourlyChart", "TPMS events by hour of day", emptyMessage, "Event count");
+        }});
+        renderChartSafely("pressureChart", "TPMS pressure values, normalized to PSI", "Pressure (PSI)", () => {{
+          emptyChart("pressureChart", "TPMS pressure values, normalized to PSI", emptyMessage, "Pressure (PSI)");
+        }});
+        renderChartSafely("temperatureChart", "TPMS temperature values", "Temperature (°C)", () => {{
+          emptyChart("temperatureChart", "TPMS temperature values", "Not enough temperature data for this time range", "Temperature (°C)");
+        }});
+        renderChartSafely("modelChart", "Events by model", "Event count", () => {{
+          emptyChart("modelChart", "Events by model", emptyMessage, "Event count");
+        }});
+        renderChartSafely("batteryChart", "Confirmed Battery Status", "Event count", () => {{
+          emptyChart("batteryChart", "Confirmed Battery Status", emptyMessage, "Event count");
+        }});
+        renderChartSafely("maybeBatteryChart", "Unconfirmed battery signal", "maybe_battery raw value", () => {{
+          emptyChart("maybeBatteryChart", "Unconfirmed battery signal", "Not enough maybe_battery data for this time range", "maybe_battery raw value");
+        }});
+        renderChartSafely("signalChart", "TPMS signal quality", "Signal value", () => {{
+          emptyChart("signalChart", "TPMS signal quality", "Not enough signal data for this time range", "Signal value");
+        }});
         return;
       }}
 
-      Plotly.newPlot("timelineChart", [{{
-        x: points.map(point => point.time),
-        y: points.map(point => point.sensor_id),
-        mode: "markers",
-        type: "scatter",
-        text: points.map(point => `${{point.sensor_id}} ${{point.model || ""}}`),
-        marker: {{ size: 7 }}
-      }}], {{
-        title: "TPMS detections by sensor ID",
-        xaxis: {{ title: "Time" }},
-        yaxis: {{ title: "TPMS Sensor ID", type: "category" }},
-        margin: {{ l: 170, r: 30, t: 50, b: 60 }}
+      renderChartSafely("timelineChart", "TPMS detections by sensor ID", "TPMS Sensor ID", () => {{
+        Plotly.newPlot("timelineChart", [{{
+          x: points.map(point => point.time),
+          y: points.map(point => point.sensor_id),
+          mode: "markers",
+          type: "scatter",
+          text: points.map(point => `${{point.sensor_id}} ${{point.model || ""}}`),
+          marker: {{ size: 7 }}
+        }}], {{
+          title: "TPMS detections by sensor ID",
+          xaxis: {{ title: "Time" }},
+          yaxis: {{ title: "TPMS Sensor ID", type: "category" }},
+          margin: {{ l: 170, r: 30, t: 50, b: 60 }}
+        }});
       }});
 
-      renderBarChart(
-        "dailyChart",
-        "TPMS events per day",
-        countByDate(points),
-        "Date",
-        "Event count",
-        emptyMessage
-      );
+      renderChartSafely("dailyChart", "TPMS events per day", "Event count", () => {{
+        renderBarChart(
+          "dailyChart",
+          "TPMS events per day",
+          countByDate(points),
+          "Date",
+          "Event count",
+          emptyMessage
+        );
+      }});
 
-      renderBarChart(
-        "hourlyChart",
-        "TPMS events by hour of day",
-        hourlyCountsFor(points),
-        "Hour",
-        "Event count",
-        emptyMessage
-      );
+      renderChartSafely("hourlyChart", "TPMS events by hour of day", "Event count", () => {{
+        renderBarChart(
+          "hourlyChart",
+          "TPMS events by hour of day",
+          hourlyCountsFor(points),
+          "Hour",
+          "Event count",
+          emptyMessage
+        );
+      }});
 
-      const pressurePoints = points
-        .map(point => {{
-          const pressure = pressurePointValue(point);
+      renderChartSafely("pressureChart", "TPMS pressure values, normalized to PSI", "Pressure (PSI)", () => {{
+        const pressurePoints = points
+          .map(point => {{
+            const pressure = pressurePointValue(point);
 
-          if (!pressure) return null;
+            if (!pressure) return null;
 
-          return {{
-            point,
-            normalizedPsi: pressure.normalizedPsi,
-            originalValue: pressure.originalValue,
-            originalUnit: pressure.originalUnit,
-            isSuspicious: pressure.normalizedPsi > PRESSURE_SUSPICIOUS_PSI
-          }};
-        }})
-        .filter(row => row !== null);
-      const normalPressurePoints = pressurePoints.filter(row => !row.isSuspicious);
-      const suspiciousPressurePoints = pressurePoints.filter(row => row.isSuspicious);
-      const hiddenSuspiciousCount = showSuspiciousPressure ? 0 : suspiciousPressurePoints.length;
+            return {{
+              point,
+              normalizedPsi: pressure.normalizedPsi,
+              originalValue: pressure.originalValue,
+              originalUnit: pressure.originalUnit,
+              isSuspicious: pressure.normalizedPsi > PRESSURE_SUSPICIOUS_PSI
+            }};
+          }})
+          .filter(row => row !== null);
+        const normalPressurePoints = pressurePoints.filter(row => !row.isSuspicious);
+        const suspiciousPressurePoints = pressurePoints.filter(row => row.isSuspicious);
+        const hiddenSuspiciousCount = showSuspiciousPressure ? 0 : suspiciousPressurePoints.length;
 
-      updatePressureChartNote(hiddenSuspiciousCount);
+        updatePressureChartNote(hiddenSuspiciousCount);
 
-      if (pressurePoints.length) {{
-        const pressureTraces = [];
+        if (pressurePoints.length) {{
+          const pressureTraces = [];
 
-        if (normalPressurePoints.length) {{
-          pressureTraces.push(pressureTrace("Pressure", normalPressurePoints));
-        }}
+          if (normalPressurePoints.length) {{
+            pressureTraces.push(pressureTrace("Pressure", normalPressurePoints));
+          }}
 
-        if (showSuspiciousPressure && suspiciousPressurePoints.length) {{
-          pressureTraces.push(pressureTrace("Suspicious pressure", suspiciousPressurePoints, true));
-        }}
+          if (showSuspiciousPressure && suspiciousPressurePoints.length) {{
+            pressureTraces.push(pressureTrace("Suspicious pressure", suspiciousPressurePoints, true));
+          }}
 
-        if (pressureTraces.length) {{
-          Plotly.newPlot("pressureChart", pressureTraces, {{
-            title: "TPMS pressure values, normalized to PSI",
-            xaxis: {{ title: "Time" }},
-            yaxis: {{ title: "Pressure (PSI)" }},
-            margin: {{ l: 80, r: 30, t: 50, b: 60 }}
-          }});
+          if (pressureTraces.length) {{
+            Plotly.newPlot("pressureChart", pressureTraces, {{
+              title: "TPMS pressure values, normalized to PSI",
+              xaxis: {{ title: "Time" }},
+              yaxis: {{ title: "Pressure (PSI)" }},
+              margin: {{ l: 80, r: 30, t: 50, b: 60 }}
+            }});
+          }} else {{
+            emptyChart("pressureChart", "TPMS pressure values, normalized to PSI", "Only suspicious pressure points in this time range", "Pressure (PSI)");
+          }}
         }} else {{
-          emptyChart("pressureChart", "TPMS pressure values, normalized to PSI", "Only suspicious pressure points in this time range", "Pressure (PSI)");
+          emptyChart("pressureChart", "TPMS pressure values, normalized to PSI", emptyMessage, "Pressure (PSI)");
         }}
-      }} else {{
-        emptyChart("pressureChart", "TPMS pressure values, normalized to PSI", emptyMessage, "Pressure (PSI)");
-      }}
+      }});
 
-      const temperaturePoints = points
-        .map(point => ({{
-          point,
-          value: numericValue(point.temperature_c)
-        }}))
-        .filter(row => row.value !== null);
+      renderChartSafely("temperatureChart", "TPMS temperature values", "Temperature (°C)", () => {{
+        const temperaturePoints = points
+          .map(point => ({{
+            point,
+            value: numericValue(point.temperature_c)
+          }}))
+          .filter(row => row.value !== null);
 
-      if (temperaturePoints.length >= 2) {{
-        try {{
+        if (temperaturePoints.length >= 2) {{
           Plotly.newPlot("temperatureChart", [{{
             name: "Temperature",
             x: temperaturePoints.map(row => row.point.time),
@@ -2108,64 +2216,69 @@ def html_end(timeline_points, daily_counts, hourly_counts):
             yaxis: {{ title: "Temperature (°C)" }},
             margin: {{ l: 80, r: 30, t: 50, b: 60 }}
           }});
-        }} catch (error) {{
-          console.error("Temperature chart failed to render", error);
-          emptyChart("temperatureChart", "TPMS temperature values", "Temperature chart failed to render", "Temperature (°C)");
+        }} else {{
+          emptyChart("temperatureChart", "TPMS temperature values", "Not enough temperature data for this time range", "Temperature (°C)");
         }}
-      }} else {{
-        emptyChart("temperatureChart", "TPMS temperature values", "Not enough temperature data for this time range", "Temperature (°C)");
-      }}
+      }});
 
-      renderBarChart(
-        "modelChart",
-        "Events by model",
-        countByModelWithProtocols(points),
-        "Model",
-        "Event count",
-        emptyMessage
-      );
+      renderChartSafely("modelChart", "Events by model", "Event count", () => {{
+        renderBarChart(
+          "modelChart",
+          "Events by model",
+          countByModelWithProtocols(points),
+          "Model",
+          "Event count",
+          emptyMessage
+        );
+      }});
 
-      renderBarChart(
-        "batteryChart",
-        "Confirmed Battery Status",
-        countBy(points, point => batteryStatus(point.battery_ok)),
-        "Battery status",
-        "Event count",
-        emptyMessage
-      );
+      renderChartSafely("batteryChart", "Confirmed Battery Status", "Event count", () => {{
+        renderBarChart(
+          "batteryChart",
+          "Confirmed Battery Status",
+          countBy(points, point => batteryStatus(point.battery_ok)),
+          "Battery status",
+          "Event count",
+          emptyMessage
+        );
+      }});
 
-      const maybeBatteryPointCount = points
-        .map(point => numericValue(point.maybe_battery))
-        .filter(value => value !== null).length;
-      const maybeBatteryRows = maybeBatteryTraces(points);
+      renderChartSafely("maybeBatteryChart", "Unconfirmed battery signal", "maybe_battery raw value", () => {{
+        const maybeBatteryPointCount = points
+          .map(point => numericValue(point.maybe_battery))
+          .filter(value => value !== null).length;
+        const maybeBatteryRows = maybeBatteryTraces(points);
 
-      if (maybeBatteryPointCount >= 2 && maybeBatteryRows.length) {{
-        Plotly.newPlot("maybeBatteryChart", maybeBatteryRows, {{
-          title: "Unconfirmed battery signal",
-          xaxis: {{ title: "Time" }},
-          yaxis: {{ title: "maybe_battery raw value" }},
-          margin: {{ l: 80, r: 30, t: 50, b: 60 }}
-        }});
-      }} else {{
-        emptyChart("maybeBatteryChart", "Unconfirmed battery signal", "Not enough maybe_battery data for this time range", "maybe_battery raw value");
-      }}
+        if (maybeBatteryPointCount >= 2 && maybeBatteryRows.length) {{
+          Plotly.newPlot("maybeBatteryChart", maybeBatteryRows, {{
+            title: "Unconfirmed battery signal",
+            xaxis: {{ title: "Time" }},
+            yaxis: {{ title: "maybe_battery raw value" }},
+            margin: {{ l: 80, r: 30, t: 50, b: 60 }}
+          }});
+        }} else {{
+          emptyChart("maybeBatteryChart", "Unconfirmed battery signal", "Not enough maybe_battery data for this time range", "maybe_battery raw value");
+        }}
+      }});
 
-      const signalTraces = [
-        metricTrace("RSSI", points, "rssi"),
-        metricTrace("SNR", points, "snr"),
-        metricTrace("Noise", points, "noise")
-      ].filter(Boolean);
+      renderChartSafely("signalChart", "TPMS signal quality", "Signal value", () => {{
+        const signalTraces = [
+          metricTrace("RSSI", points, "rssi"),
+          metricTrace("SNR", points, "snr"),
+          metricTrace("Noise", points, "noise")
+        ].filter(Boolean);
 
-      if (signalTraces.length) {{
-        Plotly.newPlot("signalChart", signalTraces, {{
-          title: "TPMS signal quality",
-          xaxis: {{ title: "Time" }},
-          yaxis: {{ title: "Signal value" }},
-          margin: {{ l: 80, r: 30, t: 50, b: 60 }}
-        }});
-      }} else {{
-        emptyChart("signalChart", "TPMS signal quality", "Not enough signal data for this time range", "Signal value");
-      }}
+        if (signalTraces.length) {{
+          Plotly.newPlot("signalChart", signalTraces, {{
+            title: "TPMS signal quality",
+            xaxis: {{ title: "Time" }},
+            yaxis: {{ title: "Signal value" }},
+            margin: {{ l: 80, r: 30, t: 50, b: 60 }}
+          }});
+        }} else {{
+          emptyChart("signalChart", "TPMS signal quality", "Not enough signal data for this time range", "Signal value");
+        }}
+      }});
     }}
 
     const chartTimeFilter = document.getElementById("chart-time-filter");
@@ -2173,13 +2286,13 @@ def html_end(timeline_points, daily_counts, hourly_counts):
 
     if (chartTimeFilter) {{
       chartTimeFilter.addEventListener("change", () => {{
-        if (chartsRendered) renderCharts();
+        if (chartsRendered) renderChartsSoon();
       }});
     }}
 
     if (suspiciousPressureToggle) {{
       suspiciousPressureToggle.addEventListener("change", () => {{
-        if (chartsRendered) renderCharts();
+        if (chartsRendered) renderChartsSoon();
       }});
     }}
   </script>
