@@ -220,7 +220,7 @@ def html_start(generated_at):
 <html>
 <head>
   <meta charset="utf-8">
-  <title>rtl_433 TPMS Report</title>
+  <title>TPMS Report</title>
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
   <style>
     :root {{
@@ -801,7 +801,7 @@ def html_start(generated_at):
   <header>
     <div class="header-row">
       <div>
-        <h1>rtl_433 TPMS Report</h1>
+        <h1>TPMS Report</h1>
         <div class="muted">
           Generated: {safe_text(generated_at)} · Source: <code>{safe_text(LOG_PATH)}</code>
         </div>
@@ -814,7 +814,6 @@ def html_start(generated_at):
 
   <main>
     <div class="note">
-      <strong>Last successful run:</strong> {safe_text(generated_at)}
       <div class="matching-summary">
         <div class="matching-summary-title">How matching works</div>
         <div class="matching-summary-grid">
@@ -1185,7 +1184,7 @@ def new_unknown_section(rows):
 
 
 def overlap_candidates_section(rows):
-    html = """
+    html = f"""
     <details class="section">
       <summary class="section-summary">
         <span class="section-summary-main">
@@ -1195,6 +1194,34 @@ def overlap_candidates_section(rows):
         <span class="section-summary-action" aria-hidden="true"></span>
       </summary>
       <p class="muted">Merges repeated passes that share two or more sensor IDs. Best table for a busy road.</p>
+      <div class="note">
+        <span class="muted">
+          Best Guess candidates are based on repeated co-occurrence of sensor IDs across separate passes.
+          More sensors seen together across more passes means stronger confidence.
+          These are suggestions from local radio observations, not confirmed vehicle identities.
+        </span>
+        <div class="matching-summary">
+          <div class="matching-summary-title">Confidence tiers</div>
+          <div class="matching-summary-grid">
+            <div class="matching-summary-item">
+              <span class="matching-summary-value">2+ sensors</span>
+              <span class="matching-summary-label">Repeated across 2+ passes — Possible</span>
+            </div>
+            <div class="matching-summary-item">
+              <span class="matching-summary-value">3+ sensors</span>
+              <span class="matching-summary-label">Repeated across 2+ passes — Strong</span>
+            </div>
+            <div class="matching-summary-item">
+              <span class="matching-summary-value">{STRONG_SENSOR_COUNT}+ sensors</span>
+              <span class="matching-summary-label">{VERY_STRONG_PASS_COUNT}+ repeated passes — Very strong</span>
+            </div>
+            <div class="matching-summary-item">
+              <span class="matching-summary-value">{MAX_CANDIDATE_SENSOR_COUNT} sensors</span>
+              <span class="matching-summary-label">Larger clusters are ignored</span>
+            </div>
+          </div>
+        </div>
+      </div>
       <div class="toolbar">
         <input placeholder="Search names, IDs, confidence..." oninput="filterTable('overlapCandidateTable', this.value)">
       </div>
@@ -1314,7 +1341,10 @@ def overlap_candidates_section(rows):
             <td>{vehicle_status_html(row["known_vehicle"], row["category"])}</td>
             <td>{pill(category_label(row["category"] or "unknown"), row["category"] or "unknown")}</td>
             <td>{safe_text(known_match_text(row["known_match"]))}</td>
-            <td>{pill(row["confidence"], "info")}</td>
+            <td title="{row['sensor_count']} sensors · {row['pass_count']} passes">
+              {pill(row["confidence"], "info")}
+              <div class="chart-inline-note">{row['sensor_count']} sensors · {row['pass_count']} passes</div>
+            </td>
             <td>{row["pass_count"]}</td>
             <td>{row["sensor_count"]}</td>
             <td>{display_time(row["first_seen"])}</td>
