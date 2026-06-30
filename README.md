@@ -69,6 +69,17 @@ The TPMS Analyzer add-on `log_path` option must match the `rtl_433` output path.
 | `scheduled_refresh_enabled` | `true` | Enables the internal daily scheduled refresh. |
 | `scheduled_refresh_time` | `03:10` | Daily refresh time in `HH:MM` using the add-on local time. |
 
+### Advanced tuning
+
+These options are safe to leave at their defaults for most installs.
+
+| Option | Default | Description |
+|---|---|---|
+| `enable_pruning` | `true` | Prunes old events from unrecognized sensors. Disable to retain all events permanently. |
+| `unknown_sensor_retention_days` | `180` | Days to keep events from unrecognized sensors before pruning. Lower on busy roads to save disk space. |
+| `pass_window_seconds` | `5` | Seconds within which readings are grouped as a single vehicle pass. Lower for busy roads, higher for quiet driveways. |
+| `min_repeat_cluster_count` | `3` | Minimum times a sensor must repeat within a pass window to be treated as a vehicle sensor rather than road noise. |
+
 ## Usage
 
 * Open the report from the Home Assistant sidebar or **Open Web UI**.

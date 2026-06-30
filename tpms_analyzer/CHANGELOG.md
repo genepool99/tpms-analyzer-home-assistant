@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.4
+
+### Added
+
+- Four advanced tuning options exposed in the add-on configuration: `enable_pruning`, `unknown_sensor_retention_days`, `pass_window_seconds`, and `min_repeat_cluster_count`. All default to their previous hard-coded values, so existing installs are unaffected.
+
 ## 0.3.3
 
 ### Changed

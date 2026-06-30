@@ -1,5 +1,5 @@
 name: TPMS Analyzer
-version: "0.3.3"
+version: "0.3.4"
 slug: tpms_analyzer
 description: Analyzes rtl_433 TPMS sensor data and generates an HTML report.
 url: https://github.com/genepool99/tpms_analyzer
@@ -28,8 +28,24 @@ options:
   vehicle_map_path: "/data/vehicles.json"
   scheduled_refresh_enabled: true
   scheduled_refresh_time: "03:10"
+  # Advanced tuning — safe to leave at defaults for most installs.
+  # Disable to keep all sensor events forever (useful for debugging).
+  enable_pruning: true
+  # Days to retain events from unrecognized sensors before pruning.
+  # Increase on quiet roads; lower on busy streets to save disk space.
+  unknown_sensor_retention_days: 180
+  # Seconds two readings must fall within to be grouped as one pass.
+  # Lower values (3-5 s) suit busy roads; higher values (8-15 s) suit driveways.
+  pass_window_seconds: 5
+  # Minimum number of times a sensor must repeat within a pass window
+  # before it is treated as a candidate vehicle sensor (not road noise).
+  min_repeat_cluster_count: 3
 schema:
   log_path: str
   vehicle_map_path: str
   scheduled_refresh_enabled: bool
   scheduled_refresh_time: str
+  enable_pruning: bool
+  unknown_sensor_retention_days: int
+  pass_window_seconds: int
+  min_repeat_cluster_count: int

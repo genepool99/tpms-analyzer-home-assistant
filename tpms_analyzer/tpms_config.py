@@ -13,6 +13,15 @@ def env_int(name: str, default: int) -> int:
         return default
 
 
+def env_bool(name: str, default: bool) -> bool:
+    val = os.environ.get(name, "").strip().lower()
+    if val in ("1", "true", "yes", "on"):
+        return True
+    if val in ("0", "false", "no", "off"):
+        return False
+    return default
+
+
 LOG_PATH = env_path("TPMS_LOG_PATH", "/config/rtl_433/logs/rtl_433.jsonl")
 
 BASE_DIR = env_path("TPMS_BASE_DIR", "/config/rtl_433/tpms_analyzer")
@@ -21,13 +30,13 @@ DB_PATH = env_path("TPMS_DB_PATH", str(BASE_DIR / "tpms.sqlite"))
 VEHICLE_MAP_PATH = env_path("TPMS_VEHICLE_MAP_PATH", str(BASE_DIR / "vehicles.json"))
 
 # Retention / pruning
-ENABLE_PRUNING = True
+ENABLE_PRUNING = env_bool("TPMS_ENABLE_PRUNING", True)
 
 # Unknown single-sensor road noise gets old fast.
-UNKNOWN_SINGLE_SENSOR_RETENTION_DAYS = 180
+UNKNOWN_SINGLE_SENSOR_RETENTION_DAYS = env_int("TPMS_UNKNOWN_SINGLE_SENSOR_RETENTION_DAYS", 180)
 
 # Unknown multi-sensor candidates are more useful, so keep longer.
-UNKNOWN_MULTI_SENSOR_RETENTION_DAYS = 180
+UNKNOWN_MULTI_SENSOR_RETENTION_DAYS = env_int("TPMS_UNKNOWN_MULTI_SENSOR_RETENTION_DAYS", 180)
 
 # Never prune events tied to known/watch/ignore vehicles.
 PRESERVE_LABELED_SENSOR_EVENTS = True
@@ -39,9 +48,9 @@ REPORT_PATH = env_path("TPMS_REPORT_PATH", "/config/www/rtl_433/tpms_report.html
 STATUS_PATH = env_path("TPMS_STATUS_PATH", "/config/www/rtl_433/tpms_status.json")
 
 # Busy road mode: short window prevents merging several passing cars.
-PASS_WINDOW_SECONDS = 5
+PASS_WINDOW_SECONDS = env_int("TPMS_PASS_WINDOW_SECONDS", 5)
 
-MIN_REPEAT_CLUSTER_COUNT = 3
+MIN_REPEAT_CLUSTER_COUNT = env_int("TPMS_MIN_REPEAT_CLUSTER_COUNT", 3)
 POSSIBLE_SENSOR_COUNT = 3
 STRONG_SENSOR_COUNT = 4
 MAX_CANDIDATE_SENSOR_COUNT = 5
