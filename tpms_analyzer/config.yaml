@@ -1,5 +1,5 @@
 name: TPMS Analyzer
-version: "0.2.2"
+version: "0.3.0"
 slug: tpms_analyzer
 description: Analyzes rtl_433 TPMS sensor data and generates an HTML report.
 url: https://github.com/genepool99/tpms_analyzer
@@ -26,6 +26,10 @@ map:
 options:
   log_path: "/config/rtl_433/logs/rtl_433.jsonl"
   vehicle_map_path: "/data/vehicles.json"
+  scheduled_refresh_enabled: true
+  scheduled_refresh_time: "03:10"
 schema:
   log_path: str
   vehicle_map_path: str
+  scheduled_refresh_enabled: bool
+  scheduled_refresh_time: str
