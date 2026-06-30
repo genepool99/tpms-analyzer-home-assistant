@@ -108,3 +108,6 @@ Check `vehicle_map_path` and review the add-on logs for write or validation erro
 **Update not appearing**
 Reload the Home Assistant Add-on Store, then check for add-on updates again.
 
+## License
+MIT License. See [LICENSE](LICENSE).
+
