@@ -778,11 +778,9 @@ def html_start(generated_at):
   <main>
     <div class="note">
       <strong>Last successful run:</strong> {safe_text(generated_at)}<br>
-      Readings within <strong>{PASS_WINDOW_SECONDS} seconds</strong> of each other are grouped into a single vehicle pass.
-      Candidate sensor groups must repeat across at least <strong>{MIN_REPEAT_CLUSTER_COUNT} separate passes</strong> before they appear in the tables below.
-      Groups larger than <strong>{MAX_CANDIDATE_SENSOR_COUNT} sensors</strong> are excluded to reduce road-noise clusters.
-      <strong>Very strong</strong> confidence requires at least <strong>{STRONG_SENSOR_COUNT} sensors</strong> repeating across <strong>{VERY_STRONG_PASS_COUNT} separate passes</strong>.
-      The report focuses on known vehicles, watchlist vehicles, and qualifying repeat candidate groups.
+      <strong>How matching works:</strong>
+      {PASS_WINDOW_SECONDS}s pass window · {MIN_REPEAT_CLUSTER_COUNT} repeat passes required · Max {MAX_CANDIDATE_SENSOR_COUNT} sensors/group · Very strong = {STRONG_SENSOR_COUNT} sensors across {VERY_STRONG_PASS_COUNT} passes<br>
+      Focused on known vehicles, watchlist vehicles, and repeat candidate groups.
     </div>
 """
 
