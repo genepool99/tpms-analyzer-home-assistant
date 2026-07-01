@@ -175,6 +175,9 @@ def write_report(context):
         for e in events
     ]
 
+    TIMELINE_MAX_POINTS = 10_000
+    timeline_points = timeline_points[-TIMELINE_MAX_POINTS:]
+
     known_count = len([v for v in vehicles if v.get("category") == "known"])
     watch_count = len([v for v in vehicles if v.get("category") == "watch"])
     ignore_count = len([v for v in vehicles if v.get("category") == "ignore"])
@@ -1032,12 +1035,12 @@ def charts_section():
     <div class="chart-toolbar">
       <label for="chart-time-filter">Time range</label>
       <select id="chart-time-filter">
-        <option value="all">All data</option>
+        <option value="all">All loaded data</option>
         <option value="24h">Last 24 hours</option>
         <option value="7d" selected>Last 7 days</option>
         <option value="30d">Last 30 days</option>
       </select>
-      <span class="muted">Signal history from the TPMS database. Use the time range filter to focus on recent activity.</span>
+      <span class="muted">Signal charts show the most recent 10,000 TPMS events. Use the time range filter to focus on a specific window.</span>
     </div>
     <div id="charts-loading" class="chart-loading" role="status" aria-live="polite" aria-hidden="true">
       Rendering charts...
