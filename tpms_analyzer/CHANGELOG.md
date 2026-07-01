@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.3.7
+
+### Changed
+
+- Renamed the project branding from TPMS Analyzer to TireSignal.
+- Updated Home Assistant add-on metadata, repository metadata, documentation, and generated report branding for TireSignal.
+- Added TireSignal logo and icon assets for Home Assistant presentation.
+- Embedded the TireSignal logo and favicon in the generated report.
+- Polished the generated report header metadata styling.
+
+### Compatibility
+
+- Kept the existing Home Assistant add-on slug, internal paths, output filenames, health response service identifier, and `TPMS_*` environment variables unchanged for install and automation compatibility.
+
 ## 0.3.6
 
 ### Added
