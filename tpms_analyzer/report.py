@@ -295,7 +295,6 @@ def html_start(generated_at):
 <head>
   <meta charset="utf-8">
   <title>TPMS Report</title>
-  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
   <style>{CSS_BLOCK}  </style>
 </head>
 <body>
@@ -1360,7 +1359,9 @@ def import_stats_section(stats, prune_stats):
 def html_end(timeline_points):
     return (
         CANDIDATE_DRAWER_HTML
-        + "\n  </main>\n\n  <script>\n"
+        + "\n  </main>\n\n"
+        + '  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>\n'
+        + "  <script>\n"
         + f"    const allTimelinePoints = {json.dumps(timeline_points)};\n"
         + JS_BLOCK
         + "  </script>\n</body>\n</html>"
