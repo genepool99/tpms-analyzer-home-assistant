@@ -1,6 +1,6 @@
-# TPMS Analyzer
+# TireSignal
 
-TPMS Analyzer is a Home Assistant add-on for `rtl_433` TPMS JSONL logs. It imports tire-pressure sensor events, groups likely vehicle passes, helps identify known, watch, and unknown sensors, and produces a Home Assistant-friendly report for reviewing activity and labeling vehicles.
+TireSignal is a Home Assistant add-on for `rtl_433` TPMS JSONL logs. It imports tire-pressure sensor events, groups likely vehicle passes, helps identify known, watch, and unknown sensors, and produces a Home Assistant-friendly report for reviewing activity and labeling vehicles.
 
 ## Features
 
@@ -13,20 +13,20 @@ TPMS Analyzer is a Home Assistant add-on for `rtl_433` TPMS JSONL logs. It impor
 * Supports direct web access on port `8099` when exposed.
 * Runs manual and scheduled refreshes inside the add-on.
 
-![TPMS Analyzer report screenshot](assets/tpms-report-screenshot.png)
+![TireSignal report screenshot](assets/tpms-report-screenshot.png)
 
-![TPMS Analyzer report screenshot](assets/tpms-report-screenshot2.png)
+![TireSignal report screenshot](assets/tpms-report-screenshot2.png)
 
 ## Requirements
 
 * Home Assistant with add-on support.
-* `rtl_433` producing a JSONL log at the path configured in TPMS Analyzer.
+* `rtl_433` producing a JSONL log at the path configured in TireSignal.
 
 ## rtl_433 requirement
 
-TPMS Analyzer does not receive radio traffic directly. It reads TPMS events from an `rtl_433` JSONL log file.
+TireSignal does not receive radio traffic directly. It reads TPMS events from an `rtl_433` JSONL log file.
 
-Install and start `rtl_433` before using TPMS Analyzer. In Home Assistant, one common option is the `rtl_433` add-on repository:
+Install and start `rtl_433` before using TireSignal. In Home Assistant, one common option is the `rtl_433` add-on repository:
 
 <a href="https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fpbkhrv%2Frtl_433-hass-addons" target="_blank" rel="noreferrer noopener">
   <img src="https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg" alt="Open your Home Assistant instance and add the rtl_433 add-on repository.">
@@ -43,24 +43,24 @@ convert customary
 output json:/config/rtl_433/logs/rtl_433.jsonl
 ```
 
-The TPMS Analyzer add-on `log_path` option must match the `rtl_433` output path.
+The TireSignal add-on `log_path` option must match the `rtl_433` output path.
 
 ## Install
 
 1. Add this repository to the Home Assistant Add-on Store:
 
-   <a href="https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fgenepool99%2Ftpms_analyzer" target="_blank" rel="noreferrer noopener">
-     <img src="https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg" alt="Open your Home Assistant instance and add the TPMS Analyzer add-on repository.">
+   <a href="https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fgenepool99%2Ftiresignal" target="_blank" rel="noreferrer noopener">
+     <img src="https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg" alt="Open your Home Assistant instance and add the TireSignal add-on repository.">
    </a>
 
    ```text
-   https://github.com/genepool99/tpms_analyzer
+   https://github.com/genepool99/tiresignal
    ```
 
-2. Install **TPMS Analyzer**.
+2. Install **TireSignal**.
 3. Configure the add-on options if needed.
 4. Start the add-on.
-5. Open TPMS Analyzer from the Home Assistant sidebar or click **Open Web UI** on the add-on page.
+5. Open TireSignal from the Home Assistant sidebar or click **Open Web UI** on the add-on page.
 
 ## Configuration
 
