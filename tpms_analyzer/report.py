@@ -274,7 +274,7 @@ def write_report(context):
     html += """
     </div>
 """
-    html += html_end(timeline_points, daily_counts, hourly_counts)
+    html += html_end(timeline_points)
 
     REPORT_PATH.write_text(html, encoding="utf-8")
 
@@ -1361,7 +1361,7 @@ def import_stats_section(stats, prune_stats):
 """
 
 
-def html_end(timeline_points, daily_counts, hourly_counts):
+def html_end(timeline_points):
     return (
         """
   <div id="candidateDrawer" class="candidate-drawer"
