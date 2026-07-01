@@ -1,14 +1,14 @@
-# TPMS Analyzer
+# TireSignal
 
 ## Overview
 
-TPMS Analyzer is a persistent Home Assistant add-on service for `rtl_433` TPMS JSONL logs. It imports tire-pressure sensor events, groups likely vehicle passes, helps identify known, watch, and unknown sensors, and serves a Home Assistant-friendly report through Ingress/sidebar or direct access on port `8099` when exposed.
+TireSignal is a persistent Home Assistant add-on service for `rtl_433` TPMS JSONL logs. It imports tire-pressure sensor events, groups likely vehicle passes, helps identify known, watch, and unknown sensors, and serves a Home Assistant-friendly report through Ingress/sidebar or direct access on port `8099` when exposed.
 
 ## rtl_433 requirement
 
-TPMS Analyzer does not receive radio traffic directly. It reads TPMS events from an `rtl_433` JSONL log file.
+TireSignal does not receive radio traffic directly. It reads TPMS events from an `rtl_433` JSONL log file.
 
-Install and start `rtl_433` before using TPMS Analyzer. In Home Assistant, one common option is the `rtl_433` add-on repository:
+Install and start `rtl_433` before using TireSignal. In Home Assistant, one common option is the `rtl_433` add-on repository:
 
 ```text
 https://github.com/pbkhrv/rtl_433-hass-addons
@@ -21,7 +21,7 @@ convert customary
 output json:/config/rtl_433/logs/rtl_433.jsonl
 ```
 
-The TPMS Analyzer add-on `log_path` option must match the `rtl_433` output path.
+The TireSignal add-on `log_path` option must match the `rtl_433` output path.
 
 ## Configuration
 
@@ -46,7 +46,7 @@ These options are safe to leave at their defaults for most installs.
 ## Using the add-on
 
 * Start the add-on from Home Assistant.
-* Open TPMS Analyzer from the Home Assistant sidebar or click **Open Web UI** on the add-on page.
+* Open TireSignal from the Home Assistant sidebar or click **Open Web UI** on the add-on page.
 * Click **Refresh** in the report for manual analysis.
 * Use the report vehicle-labeling controls to add or update sensor labels.
 * Review the Candidates tab to identify unknown or repeated sensor groups. Use the row action menu (`⋮`) on each row to add a candidate to the watch list, ignore it, move a saved match, or inspect details when available.
