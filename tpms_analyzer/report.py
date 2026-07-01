@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 
 from tpms_config import (
     DB_PATH,
@@ -13,7 +13,7 @@ from tpms_config import (
     VEHICLE_MAP_PATH,
     VERY_STRONG_PASS_COUNT,
 )
-from utils import category_label, display_dt, display_time, safe_text
+from utils import category_label, display_dt, display_time, parse_time, safe_text
 
 
 def pill(text, category="info"):
@@ -78,6 +78,53 @@ def tail_log_lines(path, limit=200):
         return [line for line in lines[-limit:] if line.strip()]
     except OSError:
         return []
+
+
+def compute_pattern_labels(row, now_dt):
+    labels = []
+
+    pass_count = row.get("pass_count") or 0
+    first_seen_dt = parse_time(row.get("first_seen", ""))
+    last_seen_dt = parse_time(row.get("last_seen", ""))
+
+    if first_seen_dt and first_seen_dt.tzinfo is None:
+        first_seen_dt = first_seen_dt.replace(tzinfo=timezone.utc)
+    if last_seen_dt and last_seen_dt.tzinfo is None:
+        last_seen_dt = last_seen_dt.replace(tzinfo=timezone.utc)
+
+    if pass_count >= 10:
+        labels.append({
+            "text": "Regular visitor",
+            "caveat": "Seen across 10 or more separate passes. Probably worth reviewing.",
+        })
+    elif pass_count <= MIN_REPEAT_CLUSTER_COUNT + 1:
+        labels.append({
+            "text": "Maybe a fluke",
+            "caveat": "Only a few repeated passes so far. Could be a coincidence.",
+        })
+
+    if last_seen_dt:
+        days_since = (now_dt - last_seen_dt).days
+        if days_since <= 7:
+            labels.append({
+                "text": "Recently active",
+                "caveat": "Seen within 7 days of this report.",
+            })
+        elif days_since > 30:
+            labels.append({
+                "text": "Went quiet",
+                "caveat": "Not seen for more than 30 days as of this report.",
+            })
+
+    if first_seen_dt and last_seen_dt and pass_count < 10:
+        span_days = (last_seen_dt - first_seen_dt).days
+        if span_days > 14:
+            labels.append({
+                "text": "Occasional visitor",
+                "caveat": "Seen over more than two weeks, but not very often.",
+            })
+
+    return labels
 
 
 def write_report(context):
@@ -1313,6 +1360,8 @@ def overlap_candidates_section(rows):
         <tbody>
 """
 
+    now_dt = datetime.now().astimezone()
+
     for index, row in enumerate(rows, start=1):
         sensor_ids = row["sensor_ids"]
         known_vehicle = row["known_vehicle"]
@@ -1329,6 +1378,7 @@ def overlap_candidates_section(rows):
             "first_seen": row["first_seen"],
             "last_seen": row["last_seen"],
             "sensor_ids": sensor_ids,
+            "pattern_labels": compute_pattern_labels(row, now_dt),
         }
         details_button = f"""
                 <button
@@ -2081,6 +2131,21 @@ def html_end(timeline_points, daily_counts, hourly_counts):
       html += `<div class="matching-summary-item"><span class="matching-summary-value">${{escHtml(c.sensor_count ?? "")}}</span><span class="matching-summary-label">Sensors</span></div>`;
       html += `<div class="matching-summary-item"><span class="matching-summary-value">${{escHtml(c.pass_count ?? "")}}</span><span class="matching-summary-label">Passes</span></div>`;
       html += `</div>`;
+
+      const patternLabels = Array.isArray(c.pattern_labels) ? c.pattern_labels : [];
+      if (patternLabels.length > 0) {{
+        html += `<div style="margin-bottom:12px;">`;
+        html += `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;">`;
+        patternLabels.forEach(label => {{
+          html += `<span class="pill info">${{escHtml(label.text)}}</span>`;
+        }});
+        html += `</div>`;
+        patternLabels.forEach(label => {{
+          html += `<div class="chart-inline-note">${{escHtml(label.caveat)}}</div>`;
+        }});
+        html += `<div class="chart-inline-note" style="margin-top:4px;font-style:italic;">Pattern hints are educated guesses from this report, not confirmed identities.</div>`;
+        html += `</div>`;
+      }}
 
       html += `<div class="chart-inline-note">First seen: ${{escHtml(c.first_seen || "—")}}</div>`;
       html += `<div class="chart-inline-note">Last seen: ${{escHtml(c.last_seen || "—")}}</div>`;
