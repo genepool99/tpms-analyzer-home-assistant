@@ -266,8 +266,14 @@ def write_report(context):
 
     <div id="tab-details" class="tab-panel">
 """
+    SENSOR_TABLE_MIN_COUNT = 5
+    SENSOR_TABLE_MAX_ROWS = 1000
+    sensor_display_rows = [
+        sensor for sensor in sensor_summaries
+        if sensor["count"] >= SENSOR_TABLE_MIN_COUNT
+    ][:SENSOR_TABLE_MAX_ROWS]
     html += recent_passes_section(recent_pass_rows)
-    html += sensor_section(sensor_summaries)
+    html += sensor_section(sensor_display_rows)
     html += recent_events_section(recent_event_rows)
     html += import_stats_section(ingest_stats, prune_stats)
 
@@ -1165,7 +1171,7 @@ def sensor_section(rows):
         </span>
         <span class="section-summary-action" aria-hidden="true"></span>
       </summary>
-      <p class="muted">Every unique TPMS sensor ID seen in the database, with basic timing, signal, pressure, and temperature summaries. Use this table when identifying which sensors belong together.</p>
+      <p class="muted">Repeated TPMS sensor IDs seen 5 or more times, limited to the 1,000 most recently active rows. One-off and low-repeat signals are hidden here to keep the report responsive.</p>
       <div class="toolbar">
         <input placeholder="Search sensor IDs, models, names..." oninput="filterTable('sensorTable', this.value)">
       </div>
