@@ -2147,6 +2147,78 @@ def html_end(timeline_points, daily_counts, hourly_counts):
         html += `</div>`;
       }}
 
+      html += `<div style="margin-top:12px;margin-bottom:12px;">`;
+      html += `<div class="chart-inline-note" style="font-weight:700;margin-bottom:6px;">Evidence from raw events</div>`;
+
+      const candidatePoints = allTimelinePoints.filter(pt => sensorIds.includes(pt.sensor_id));
+
+      if (candidatePoints.length === 0) {{
+        html += `<div class="chart-inline-note">No event detail available from current data.</div>`;
+      }} else {{
+        const eventCount = candidatePoints.length;
+
+        let latestDate = null;
+        let latestPoint = null;
+        candidatePoints.forEach(pt => {{
+          const d = parseChartTime(pt.time);
+          if (!d) return;
+          if (!latestDate || d > latestDate) {{
+            latestDate = d;
+            latestPoint = pt;
+          }}
+        }});
+
+        html += `<div class="matching-summary-grid" style="margin-bottom:8px;">`;
+        html += `<div class="matching-summary-item"><span class="matching-summary-value">${{escHtml(eventCount)}}</span><span class="matching-summary-label">Events</span></div>`;
+        html += `<div class="matching-summary-item"><span class="matching-summary-value" style="font-size:14px;">${{latestPoint ? escHtml(localDateLabel(latestPoint.time)) : "Unknown"}}</span><span class="matching-summary-label">Latest event</span></div>`;
+        html += `</div>`;
+
+        const models = Array.from(new Set(
+          candidatePoints.map(pt => categoryValue(pt.model)).filter(v => v !== "Unknown")
+        ));
+        const protocols = Array.from(new Set(
+          candidatePoints.map(pt => categoryValue(pt.protocol)).filter(v => v !== "Unknown")
+        ));
+
+        if (models.length > 0) {{
+          html += `<div class="chart-inline-note">Models: ${{escHtml(models.join(", "))}}</div>`;
+        }}
+        if (protocols.length > 0) {{
+          html += `<div class="chart-inline-note">Protocols: ${{escHtml(protocols.join(", "))}}</div>`;
+        }}
+
+        const pressureRows = candidatePoints
+          .map(pt => pressurePointValue(pt))
+          .filter(pv => pv !== null);
+
+        if (pressureRows.length > 0) {{
+          const psiValues = pressureRows.map(pv => pv.normalizedPsi);
+          const minPsi = Math.min(...psiValues);
+          const maxPsi = Math.max(...psiValues);
+          const hasSuspicious = psiValues.some(v => v > PRESSURE_SUSPICIOUS_PSI);
+          const pressureLine = `Pressure (PSI): ${{formatPressure(minPsi)}} – ${{formatPressure(maxPsi)}}`;
+          html += `<div class="chart-inline-note">${{escHtml(pressureLine)}}${{hasSuspicious ? ' <span class="pill info">High pressure seen</span>' : ""}}</div>`;
+        }}
+
+        const rssiValues = candidatePoints.map(pt => numericValue(pt.rssi)).filter(v => v !== null);
+        const snrValues = candidatePoints.map(pt => numericValue(pt.snr)).filter(v => v !== null);
+        const avgRssi = rssiValues.length > 0
+          ? rssiValues.reduce((a, b) => a + b, 0) / rssiValues.length
+          : null;
+        const avgSnr = snrValues.length > 0
+          ? snrValues.reduce((a, b) => a + b, 0) / snrValues.length
+          : null;
+
+        if (avgRssi !== null || avgSnr !== null) {{
+          const parts = [];
+          if (avgRssi !== null) parts.push(`Avg RSSI: ${{avgRssi.toFixed(1)}}`);
+          if (avgSnr !== null) parts.push(`Avg SNR: ${{avgSnr.toFixed(1)}}`);
+          html += `<div class="chart-inline-note">${{escHtml(parts.join(" · "))}}</div>`;
+        }}
+      }}
+
+      html += `</div>`;
+
       html += `<div class="chart-inline-note">First seen: ${{escHtml(c.first_seen || "—")}}</div>`;
       html += `<div class="chart-inline-note">Last seen: ${{escHtml(c.last_seen || "—")}}</div>`;
 
