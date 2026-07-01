@@ -1,4 +1,5 @@
 import json
+from collections import defaultdict
 from datetime import datetime, timezone
 
 from tpms_config import (
@@ -21,9 +22,12 @@ from report_js import JS_BLOCK
 from report_templates import CANDIDATE_DRAWER_HTML
 
 
-def pill(text, category="info"):
+def pill(text, category="info", description=None):
     text = safe_text(text)
     category = safe_text(category or "info")
+    if description:
+        desc = safe_text(description)
+        return f'<span class="pill {category}" title="{desc}" aria-label="{text}: {desc}">{text}</span>'
     return f'<span class="pill {category}">{text}</span>'
 
 
@@ -171,8 +175,56 @@ def pattern_label_class(label_text):
         "Recently active": "pattern-recent",
         "Went quiet": "pattern-quiet",
         "Occasional visitor": "pattern-occasional",
+        "Mixed sensor types": "pattern-mixed",
     }
     return mapping.get(label_text, "pattern-default")
+
+
+def compute_mixed_sensor_label(sensor_ids, sensor_model_map, sensor_protocol_map):
+    all_models = set().union(*(sensor_model_map.get(sid, set()) for sid in sensor_ids))
+    all_protocols = set().union(*(sensor_protocol_map.get(sid, set()) for sid in sensor_ids))
+    if len(all_models) > 1 or len(all_protocols) > 1:
+        return {
+            "text": "Mixed sensor types",
+            "caveat": (
+                "This group includes more than one sensor model or protocol. "
+                "That can happen with replacement, aftermarket, winter-wheel, or cloned sensors, "
+                "so this is only a caution — not a rejection."
+            ),
+        }
+    return None
+
+
+PATTERN_LABEL_DESCRIPTIONS = {
+    "Mixed sensor types": "This group includes more than one sensor model or protocol. Possible with replacement, aftermarket, winter-wheel, or cloned sensors. Caution only — not a rejection.",
+    "Regular visitor": "Seen across many separate passes. Probably worth reviewing.",
+    "Recently active": "Seen recently relative to this report.",
+    "Maybe a fluke": "Only a few repeated passes so far. Could be a coincidence.",
+    "Went quiet": "Not seen recently relative to this report.",
+    "Occasional visitor": "Seen over an extended period, but not very often.",
+}
+
+CONFIDENCE_DESCRIPTIONS = {
+    "Very strong": "Four or more sensors seen together across several passes.",
+    "Strong": "Three or more sensors seen together across repeated passes.",
+    "Possible": "Two sensors seen together across repeated passes.",
+    "Weak": "Limited repeated evidence. Review before labeling.",
+    "Single sensor": "Only one sensor is represented in this group.",
+}
+
+
+def pattern_pills(labels):
+    html = ""
+    for lbl in labels:
+        desc = lbl.get("caveat") or PATTERN_LABEL_DESCRIPTIONS.get(lbl.get("text", ""), "")
+        cls = safe_text(lbl.get("class", "pattern-default"))
+        text = safe_text(lbl.get("text", ""))
+        if desc:
+            desc_escaped = safe_text(desc)
+            html += f'<span class="pill {cls}" title="{desc_escaped}" aria-label="{text}: {desc_escaped}">{text}</span>'
+        else:
+            html += f'<span class="pill {cls}">{text}</span>'
+    return html
 
 
 def write_report(context):
@@ -188,6 +240,19 @@ def write_report(context):
     vehicles = context["vehicles"]
     ingest_stats = context["ingest_stats"]
     prune_stats = context.get("prune_stats", {})
+
+    sensor_model_map = defaultdict(set)
+    sensor_protocol_map = defaultdict(set)
+    for event in events:
+        sensor_id = event.get("sensor_id")
+        if not sensor_id:
+            continue
+        model = event.get("model") or ""
+        protocol = event.get("protocol") or ""
+        if model:
+            sensor_model_map[sensor_id].add(model)
+        if protocol:
+            sensor_protocol_map[sensor_id].add(protocol)
 
     generated_at = datetime.now().astimezone().strftime("%Y-%m-%d %H:%M:%S %Z")
 
@@ -286,9 +351,9 @@ def write_report(context):
 
     <div id="tab-candidates" class="tab-panel">
 """
-    html += new_unknown_section(new_unknown_candidates)
-    html += overlap_candidates_section(overlap_candidate_summaries)
-    html += exact_candidates_section(exact_candidate_summaries)
+    html += new_unknown_section(new_unknown_candidates, sensor_model_map, sensor_protocol_map)
+    html += overlap_candidates_section(overlap_candidate_summaries, sensor_model_map, sensor_protocol_map)
+    html += exact_candidates_section(exact_candidate_summaries, sensor_model_map, sensor_protocol_map)
 
     html += """
     </div>
@@ -598,7 +663,7 @@ def ignored_vehicle_section(rows):
     return html
 
 
-def new_unknown_section(rows):
+def new_unknown_section(rows, sensor_model_map=None, sensor_protocol_map=None):
     html = """
     <details class="section">
       <summary class="section-summary">
@@ -661,9 +726,16 @@ def new_unknown_section(rows):
             {"label": "Ignore", "payload": ignore_payload, "handler": "rowMenuEdit"},
         ]
 
+        mixed_label_data = None
+        if sensor_model_map is not None or sensor_protocol_map is not None:
+            raw_mixed = compute_mixed_sensor_label(sensor_ids, sensor_model_map or {}, sensor_protocol_map or {})
+            if raw_mixed:
+                mixed_label_data = {**raw_mixed, "class": pattern_label_class(raw_mixed["text"])}
+        mixed_extra = ("<br>" + pattern_pills([mixed_label_data])) if mixed_label_data else ""
+
         html += f"""
           <tr>
-            <td>{pill(row["confidence"], "info")}</td>
+            <td>{pill(row["confidence"], "info", CONFIDENCE_DESCRIPTIONS.get(row["confidence"]))}{mixed_extra}</td>
             <td>{row["pass_count"]}</td>
             <td>{row["sensor_count"]}</td>
             <td>{display_time(row["first_seen"])}</td>
@@ -682,7 +754,7 @@ def new_unknown_section(rows):
     return html
 
 
-def overlap_candidates_section(rows):
+def overlap_candidates_section(rows, sensor_model_map=None, sensor_protocol_map=None):
     html = f"""
     <details class="section">
       <summary class="section-summary">
@@ -753,10 +825,16 @@ def overlap_candidates_section(rows):
             {"text": lbl["text"], "caveat": lbl["caveat"], "class": pattern_label_class(lbl["text"])}
             for lbl in raw_labels
         ]
-        pattern_pills_html = "".join(
-            f'<span class="pill {lbl["class"]}">{safe_text(lbl["text"])}</span>'
-            for lbl in pattern_labels
-        )
+        if sensor_model_map is not None or sensor_protocol_map is not None:
+            mixed_label = compute_mixed_sensor_label(
+                sensor_ids,
+                sensor_model_map or {},
+                sensor_protocol_map or {},
+            )
+            if mixed_label:
+                mixed_label["class"] = pattern_label_class(mixed_label["text"])
+                pattern_labels.append(mixed_label)
+        pattern_pills_html = pattern_pills(pattern_labels)
 
         details_payload = {
             "title": known_vehicle or f"Candidate {index}",
@@ -829,7 +907,7 @@ def overlap_candidates_section(rows):
             <td>{vehicle_status_html(row["known_vehicle"], row["category"])}</td>
             <td>{pill(category_label(row["category"] or "unknown"), row["category"] or "unknown")}</td>
             <td>{safe_text(known_match_text(row["known_match"]))}</td>
-            <td title="{row['sensor_count']} sensors · {row['pass_count']} passes">{pill(row["confidence"], "confidence")}{"<br>" + pattern_pills_html if pattern_pills_html else ""}</td>
+            <td title="{row['sensor_count']} sensors · {row['pass_count']} passes">{pill(row["confidence"], "confidence", CONFIDENCE_DESCRIPTIONS.get(row["confidence"]))}{"<br>" + pattern_pills_html if pattern_pills_html else ""}</td>
             <td>{row["pass_count"]}</td>
             <td>{row["sensor_count"]}</td>
             <td>{display_time(row["first_seen"])}</td>
@@ -847,7 +925,7 @@ def overlap_candidates_section(rows):
     return html
 
 
-def exact_candidates_section(rows):
+def exact_candidates_section(rows, sensor_model_map=None, sensor_protocol_map=None):
     html = f"""
     <details class="section">
       <summary class="section-summary">
@@ -935,12 +1013,19 @@ def exact_candidates_section(rows):
                 {"label": "Ignore", "payload": ignore_payload, "handler": "rowMenuEdit"},
             ]
 
+        mixed_label_data = None
+        if sensor_model_map is not None or sensor_protocol_map is not None:
+            raw_mixed = compute_mixed_sensor_label(sensor_ids, sensor_model_map or {}, sensor_protocol_map or {})
+            if raw_mixed:
+                mixed_label_data = {**raw_mixed, "class": pattern_label_class(raw_mixed["text"])}
+        mixed_extra = ("<br>" + pattern_pills([mixed_label_data])) if mixed_label_data else ""
+
         html += f"""
           <tr>
             <td>{vehicle_status_html(row["known_vehicle"], row["category"])}</td>
             <td>{pill(category_label(row["category"] or "unknown"), row["category"] or "unknown")}</td>
             <td>{safe_text(known_match_text(row["known_match"]))}</td>
-            <td>{pill(row["confidence"], "info")}</td>
+            <td>{pill(row["confidence"], "info", CONFIDENCE_DESCRIPTIONS.get(row["confidence"]))}{mixed_extra}</td>
             <td>{row["pass_count"]}</td>
             <td>{row["sensor_count"]}</td>
             <td>{display_time(row["first_seen"])}</td>

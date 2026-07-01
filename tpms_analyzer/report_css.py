@@ -437,6 +437,11 @@ CSS_BLOCK = """
       color: var(--info-text);
     }
 
+    .pattern-mixed {
+      background: #ffedd5;
+      color: #c2410c;
+    }
+
     .note {
       background: #fff7ed;
       border: 1px solid #fed7aa;
