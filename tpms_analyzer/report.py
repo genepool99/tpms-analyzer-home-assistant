@@ -33,9 +33,10 @@ def pill(text, category="info", description=None):
 
 def vehicle_status_html(name, category):
     if name:
-        return pill(name, category or "known")
+        normalized = category or "known"
+        return pill(name, normalized, category_description(normalized))
 
-    return pill("Unknown", "unknown")
+    return pill("Unknown", "unknown", category_description("unknown"))
 
 
 def row_actions_menu(items, label="Vehicle actions"):
@@ -211,6 +212,34 @@ CONFIDENCE_DESCRIPTIONS = {
     "Weak": "Limited repeated evidence. Review before labeling.",
     "Single sensor": "Only one sensor is represented in this group.",
 }
+
+
+CATEGORY_DESCRIPTIONS = {
+    "known": "Labeled as a known vehicle.",
+    "watch": "Saved to the watchlist for follow-up.",
+    "ignore": "Marked as ignored/noise in the vehicle map.",
+    "unknown": "No saved vehicle-map entry currently matches this group.",
+}
+
+
+def category_description(category):
+    return CATEGORY_DESCRIPTIONS.get((category or "unknown").lower(), "")
+
+
+def category_pill(category):
+    normalized = category or "unknown"
+    return pill(category_label(normalized), normalized, category_description(normalized))
+
+
+def saved_match_html(known_vehicle, category, known_match):
+    if known_vehicle:
+        normalized = category or "known"
+        name_pill = pill(known_vehicle, normalized, category_description(normalized))
+        match_text = known_match_text(known_match)
+        if match_text:
+            return f'{name_pill}<br><span class="muted">{safe_text(match_text)}</span>'
+        return name_pill
+    return '<span class="muted">No saved match</span>'
 
 
 def pattern_pills(labels):
@@ -561,7 +590,7 @@ def known_vehicle_section(rows):
         html += f"""
           <tr>
             <td>{safe_text(row["name"])}</td>
-            <td>{pill(category_label(row["category"]), row["category"])}</td>
+            <td>{category_pill(row["category"])}</td>
             <td>{row["seen_today"]}</td>
             <td>{row["seen_count"]}</td>
             <td>{safe_text(row["best_match"])}</td>
@@ -681,6 +710,7 @@ def new_unknown_section(rows, sensor_model_map=None, sensor_protocol_map=None):
         <thead>
           <tr>
             <th>Confidence</th>
+            <th>Signals</th>
             <th>Pass Count</th>
             <th>Sensor Count</th>
             <th>First Seen</th>
@@ -731,11 +761,12 @@ def new_unknown_section(rows, sensor_model_map=None, sensor_protocol_map=None):
             raw_mixed = compute_mixed_sensor_label(sensor_ids, sensor_model_map or {}, sensor_protocol_map or {})
             if raw_mixed:
                 mixed_label_data = {**raw_mixed, "class": pattern_label_class(raw_mixed["text"])}
-        mixed_extra = ("<br>" + pattern_pills([mixed_label_data])) if mixed_label_data else ""
+        signals_html = pattern_pills([mixed_label_data]) if mixed_label_data else '<span class="muted">—</span>'
 
         html += f"""
           <tr>
-            <td>{pill(row["confidence"], "info", CONFIDENCE_DESCRIPTIONS.get(row["confidence"]))}{mixed_extra}</td>
+            <td>{pill(row["confidence"], "info", CONFIDENCE_DESCRIPTIONS.get(row["confidence"]))}</td>
+            <td>{signals_html}</td>
             <td>{row["pass_count"]}</td>
             <td>{row["sensor_count"]}</td>
             <td>{display_time(row["first_seen"])}</td>
@@ -798,10 +829,9 @@ def overlap_candidates_section(rows, sensor_model_map=None, sensor_protocol_map=
       <table id="overlapCandidateTable">
         <thead>
           <tr>
-            <th>Known Name</th>
-            <th>Category</th>
-            <th>Known Match</th>
+            <th>Saved Match</th>
             <th>Confidence</th>
+            <th>Signals</th>
             <th>Pass Count</th>
             <th>Sensor Count</th>
             <th>First Seen</th>
@@ -902,12 +932,13 @@ def overlap_candidates_section(rows, sensor_model_map=None, sensor_protocol_map=
                 {"label": "Details", "payload": details_payload, "handler": "openCandidateDrawer", "data_attr": "candidate"},
             ]
 
+        overlap_signals_html = pattern_pills_html if pattern_pills_html else '<span class="muted">—</span>'
+
         html += f"""
           <tr>
-            <td>{vehicle_status_html(row["known_vehicle"], row["category"])}</td>
-            <td>{pill(category_label(row["category"] or "unknown"), row["category"] or "unknown")}</td>
-            <td>{safe_text(known_match_text(row["known_match"]))}</td>
-            <td title="{row['sensor_count']} sensors · {row['pass_count']} passes">{pill(row["confidence"], "confidence", CONFIDENCE_DESCRIPTIONS.get(row["confidence"]))}{"<br>" + pattern_pills_html if pattern_pills_html else ""}</td>
+            <td>{saved_match_html(row["known_vehicle"], row["category"], row["known_match"])}</td>
+            <td title="{row['sensor_count']} sensors · {row['pass_count']} passes">{pill(row["confidence"], "confidence", CONFIDENCE_DESCRIPTIONS.get(row["confidence"]))}</td>
+            <td>{overlap_signals_html}</td>
             <td>{row["pass_count"]}</td>
             <td>{row["sensor_count"]}</td>
             <td>{display_time(row["first_seen"])}</td>
@@ -942,10 +973,9 @@ def exact_candidates_section(rows, sensor_model_map=None, sensor_protocol_map=No
       <table id="exactCandidateTable">
         <thead>
           <tr>
-            <th>Known Name</th>
-            <th>Category</th>
-            <th>Known Match</th>
+            <th>Saved Match</th>
             <th>Confidence</th>
+            <th>Signals</th>
             <th>Pass Count</th>
             <th>Sensor Count</th>
             <th>First Seen</th>
@@ -1018,14 +1048,13 @@ def exact_candidates_section(rows, sensor_model_map=None, sensor_protocol_map=No
             raw_mixed = compute_mixed_sensor_label(sensor_ids, sensor_model_map or {}, sensor_protocol_map or {})
             if raw_mixed:
                 mixed_label_data = {**raw_mixed, "class": pattern_label_class(raw_mixed["text"])}
-        mixed_extra = ("<br>" + pattern_pills([mixed_label_data])) if mixed_label_data else ""
+        exact_signals_html = pattern_pills([mixed_label_data]) if mixed_label_data else '<span class="muted">—</span>'
 
         html += f"""
           <tr>
-            <td>{vehicle_status_html(row["known_vehicle"], row["category"])}</td>
-            <td>{pill(category_label(row["category"] or "unknown"), row["category"] or "unknown")}</td>
-            <td>{safe_text(known_match_text(row["known_match"]))}</td>
-            <td>{pill(row["confidence"], "info", CONFIDENCE_DESCRIPTIONS.get(row["confidence"]))}{mixed_extra}</td>
+            <td>{saved_match_html(row["known_vehicle"], row["category"], row["known_match"])}</td>
+            <td>{pill(row["confidence"], "info", CONFIDENCE_DESCRIPTIONS.get(row["confidence"]))}</td>
+            <td>{exact_signals_html}</td>
             <td>{row["pass_count"]}</td>
             <td>{row["sensor_count"]}</td>
             <td>{display_time(row["first_seen"])}</td>
@@ -1158,7 +1187,7 @@ def recent_passes_section(rows):
         html += f"""
           <tr>
             <td>{vehicle_status_html(row["known_vehicle"], row["category"])}</td>
-            <td>{pill(category_label(row["category"] or "unknown"), row["category"] or "unknown")}</td>
+            <td>{category_pill(row["category"] or "unknown")}</td>
             <td>{safe_text(known_match_text(row["known_match"]))}</td>
             <td>{display_dt(row["start"])}</td>
             <td>{row["duration_seconds"]}s</td>
@@ -1216,7 +1245,7 @@ def sensor_section(rows):
         html += f"""
           <tr>
             <td>{vehicle_status_html(row["vehicle_name"], row["category"])}</td>
-            <td>{pill(category_label(row["category"] or "unknown"), row["category"] or "unknown")}</td>
+            <td>{category_pill(row["category"] or "unknown")}</td>
             <td>{safe_text(row["sensor_id"])}</td>
             <td>{row["count"]}</td>
             <td>{display_time(row["first_seen"])}</td>

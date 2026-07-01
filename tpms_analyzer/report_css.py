@@ -375,6 +375,7 @@ CSS_BLOCK = """
       font-size: 12px;
       white-space: nowrap;
       font-weight: 700;
+      margin: 2px 3px 2px 0;
     }
 
     .known {
