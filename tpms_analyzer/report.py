@@ -141,8 +141,6 @@ def write_report(context):
     overlap_candidate_summaries = context["overlap_candidate_summaries"]
     known_vehicle_summaries = context["known_vehicle_summaries"]
     new_unknown_candidates = context["new_unknown_candidates"]
-    daily_counts = context["daily_counts"]
-    hourly_counts = context["hourly_counts"]
     vehicles = context["vehicles"]
     ingest_stats = context["ingest_stats"]
     prune_stats = context.get("prune_stats", {})
@@ -305,29 +303,6 @@ def html_start(generated_at):
   </header>
 
   <main>
-    <div class="note">
-      <div class="matching-summary">
-        <div class="matching-summary-title">How matching works</div>
-        <div class="matching-summary-grid">
-          <div class="matching-summary-item">
-            <span class="matching-summary-value">{PASS_WINDOW_SECONDS}s</span>
-            <span class="matching-summary-label">Pass window</span>
-          </div>
-          <div class="matching-summary-item">
-            <span class="matching-summary-value">{MIN_REPEAT_CLUSTER_COUNT}</span>
-            <span class="matching-summary-label">Repeat passes required</span>
-          </div>
-          <div class="matching-summary-item">
-            <span class="matching-summary-value">{MAX_CANDIDATE_SENSOR_COUNT}</span>
-            <span class="matching-summary-label">Max sensors/group</span>
-          </div>
-          <div class="matching-summary-item">
-            <span class="matching-summary-value">{STRONG_SENSOR_COUNT} \xd7 {VERY_STRONG_PASS_COUNT}</span>
-            <span class="matching-summary-label">Very strong threshold</span>
-          </div>
-        </div>
-      </div>
-    </div>
 """
 
 
@@ -684,7 +659,7 @@ def overlap_candidates_section(rows):
         </span>
         <span class="section-summary-action" aria-hidden="true"></span>
       </summary>
-      <p class="muted">Groups passes that share two or more sensor IDs, allowing partial overlap across passes. Example: near a busy road, the same vehicle may only transmit three of four sensors during a pass. Click Details to inspect a suggested vehicle.</p>
+      <p class="muted">Suggested vehicle groups built from TPMS sensor IDs that repeatedly appear together. These are useful guesses, not confirmed identities. Example: if three or four tire sensors show up together across multiple passes, the analyzer treats them as a possible vehicle. Click Details to inspect the evidence.</p>
       <div class="note">
         <span class="muted">
           Best Guess candidates are based on repeated co-occurrence of sensor IDs across separate passes.
