@@ -635,36 +635,6 @@ JS_BLOCK = """    const refreshWebhookUrl = "refresh";
       return "Unknown";
     }
 
-    function groupedMetricTraces(points, valueFn, textFn) {
-      const bySensorId = new Map();
-
-      points.forEach(point => {
-        const value = valueFn(point);
-
-        if (value === null || value === undefined) return;
-
-        const sensorId = point.sensor_id || "Unknown";
-
-        if (!bySensorId.has(sensorId)) {
-          bySensorId.set(sensorId, []);
-        }
-
-        bySensorId.get(sensorId).push({ point, value });
-      });
-
-      return Array.from(bySensorId.entries())
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([sensorId, rows]) => ({
-          name: sensorId,
-          x: rows.map(row => row.point.time),
-          y: rows.map(row => row.value),
-          mode: "markers",
-          type: "scatter",
-          text: rows.map(row => textFn(row.point, row.value)),
-          marker: { size: 7 }
-        }));
-    }
-
     function maybeBatteryTraceRows(points) {
       return points
         .map(point => ({
