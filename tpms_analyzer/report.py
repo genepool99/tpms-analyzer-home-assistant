@@ -5,6 +5,7 @@ from tpms_config import (
     DB_PATH,
     LOG_PATH,
     MAX_CANDIDATE_SENSOR_COUNT,
+    MAX_RECENT_PASSES,
     MIN_REPEAT_CLUSTER_COUNT,
     PASS_WINDOW_SECONDS,
     REPORT_PATH,
@@ -904,7 +905,7 @@ def html_start(generated_at):
           </div>
         </div>
       </div>
-      <span class="muted">Focused on known vehicles, watchlist vehicles, and repeat candidate groups.</span>
+      <span class="muted">Monitors your labeled vehicles and groups repeated unknown signals into candidate vehicles for review.</span>
     </div>
 """
 
@@ -958,10 +959,10 @@ def summary_cards(
 
 
 def known_vehicle_section(rows):
-    html = """
+    html = f"""
     <div class="section">
-      <h2>Known / Watchlist Vehicle Summary</h2>
-      <p class="muted">Vehicles from vehicles.json, matched by sensor overlap.</p>
+      <h2>Known &amp; Watchlist Vehicles</h2>
+      <p class="muted">Your labeled vehicles, matched against observed passes. Example: if two or more sensors from a saved vehicle appear within a {PASS_WINDOW_SECONDS}-second pass window, the report counts that as a match.</p>
       <div class="toolbar">
         <input placeholder="Search known/watch vehicles..." oninput="filterTable('knownVehicleTable', this.value)">
       </div>
@@ -1081,7 +1082,7 @@ def ignored_vehicle_section(rows):
         </span>
         <span class="section-summary-action" aria-hidden="true"></span>
       </summary>
-      <p class="muted">Ignored entries from vehicles.json. Restore one to Known or Watchlist if it should be tracked again.</p>
+      <p class="muted">Sensor groups you've marked as uninteresting noise. Move one back to Known or Watchlist if you change your mind.</p>
       <div class="toolbar">
         <input placeholder="Search ignored vehicles..." oninput="filterTable('ignoredVehicleTable', this.value)">
       </div>
@@ -1159,12 +1160,12 @@ def new_unknown_section(rows):
     <details class="section">
       <summary class="section-summary">
         <span class="section-summary-main">
-          <span class="section-summary-title">New Repeat Unknowns</span>
+          <span class="section-summary-title">Unlabeled Repeat Candidates</span>
           <span class="section-summary-subtitle">Click to expand or collapse this section</span>
         </span>
         <span class="section-summary-action" aria-hidden="true"></span>
       </summary>
-      <p class="muted">Unlabeled repeat candidates. These are good candidates to add to vehicles.json as known, watch, or ignore.</p>
+      <p class="muted">Sensor clusters that appeared together repeatedly but have not been labeled yet. Example: a recurring four-sensor group may be a new vehicle to add, watch, or ignore.</p>
       <div class="toolbar">
         <input placeholder="Search unknown candidates..." oninput="filterTable('newUnknownTable', this.value)">
       </div>
@@ -1262,7 +1263,7 @@ def overlap_candidates_section(rows):
         </span>
         <span class="section-summary-action" aria-hidden="true"></span>
       </summary>
-      <p class="muted">Merges repeated passes that share two or more sensor IDs. Best table for a busy road.</p>
+      <p class="muted">Groups passes that share two or more sensor IDs, allowing partial overlap across passes. Example: near a busy road, the same vehicle may only transmit three of four sensors during a pass. Click Details to inspect a suggested vehicle.</p>
       <div class="note">
         <span class="muted">
           Best Guess candidates are based on repeated co-occurrence of sensor IDs across separate passes.
@@ -1455,7 +1456,7 @@ def overlap_candidates_section(rows):
 
 
 def exact_candidates_section(rows):
-    html = """
+    html = f"""
     <details class="section">
       <summary class="section-summary">
         <span class="section-summary-main">
@@ -1464,7 +1465,7 @@ def exact_candidates_section(rows):
         </span>
         <span class="section-summary-action" aria-hidden="true"></span>
       </summary>
-      <p class="muted">Exact repeated sensor groups. Stricter than overlap matching.</p>
+      <p class="muted">Groups passes where the identical set of sensor IDs appeared together repeatedly. Example: the same three tire IDs seen together at least {MIN_REPEAT_CLUSTER_COUNT} times. This is stricter than Best Guess and may miss partial passes.</p>
       <div class="toolbar">
         <input placeholder="Search exact candidates..." oninput="filterTable('exactCandidateTable', this.value)">
       </div>
@@ -1615,7 +1616,7 @@ def charts_section():
         <option value="7d" selected>Last 7 days</option>
         <option value="30d">Last 30 days</option>
       </select>
-      <span class="muted">Filters charts using event timestamps from this report.</span>
+      <span class="muted">Signal history from the TPMS database. Use the time range filter to focus on recent activity.</span>
     </div>
     <div id="charts-loading" class="chart-loading" role="status" aria-live="polite" aria-hidden="true">
       Rendering charts...
@@ -1681,7 +1682,7 @@ def charts_section():
 
 
 def recent_passes_section(rows):
-    html = """
+    html = f"""
     <details class="section" open>
       <summary class="section-summary">
         <span class="section-summary-main">
@@ -1690,7 +1691,7 @@ def recent_passes_section(rows):
         </span>
         <span class="section-summary-action" aria-hidden="true"></span>
       </summary>
-      <p class="muted">Single-sensor passes are included, but they are weak evidence next to a busy road.</p>
+      <p class="muted">A pass is a burst of TPMS signals received within a {PASS_WINDOW_SECONDS}-second window. Example: several tire IDs heard close together are shown as one pass. Up to {MAX_RECENT_PASSES} recent passes are shown.</p>
       <div class="toolbar">
         <input placeholder="Search recent passes..." oninput="filterTable('passTable', this.value)">
       </div>
@@ -1749,7 +1750,7 @@ def sensor_section(rows):
         </span>
         <span class="section-summary-action" aria-hidden="true"></span>
       </summary>
-      <p class="muted">Raw sensor-level summary. Use this to label vehicles.</p>
+      <p class="muted">Every unique TPMS sensor ID seen in the database, with basic timing, signal, pressure, and temperature summaries. Use this table when identifying which sensors belong together.</p>
       <div class="toolbar">
         <input placeholder="Search sensor IDs, models, names..." oninput="filterTable('sensorTable', this.value)">
       </div>
@@ -1809,6 +1810,7 @@ def recent_events_section(rows):
         </span>
         <span class="section-summary-action" aria-hidden="true"></span>
       </summary>
+      <p class="muted">Individual TPMS signal events, most recent first. Example: one vehicle pass may produce multiple raw events from one or more tire sensors.</p>
       <div class="toolbar">
         <input placeholder="Search recent events..." oninput="filterTable('eventTable', this.value)">
       </div>
@@ -1855,7 +1857,7 @@ def raw_packets_section(lines):
     html = """
     <div class="section">
       <h2>Recent Raw Packets</h2>
-      <p class="muted">Newest raw rtl_433 JSONL packets from the active log file. This includes packets that may not be parsed as TPMS events.</p>
+      <p class="muted">Raw JSON lines from the rtl_433 log file, newest first. Includes all packet types, not just TPMS, which is useful when checking what signals are being received.</p>
       <div class="toolbar">
         <input placeholder="Search raw packets..." oninput="filterTable('rawPacketTable', this.value)">
       </div>
@@ -1914,6 +1916,7 @@ def import_stats_section(stats, prune_stats):
     return f"""
     <div class="section">
       <h2>Import / Pruning Stats</h2>
+      <p class="muted">Log ingestion and database maintenance counts from this run.</p>
       <table>
         <tbody>
           <tr><th>Imported this run</th><td>{stats.get("imported", 0)}</td></tr>
