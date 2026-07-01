@@ -797,4 +797,101 @@ CSS_BLOCK = """
       outline: 3px solid rgba(37, 99, 235, 0.35);
       outline-offset: 3px;
     }
+
+    .vehicle-edit-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .vehicle-edit-modal.open {
+      display: flex;
+    }
+
+    .vehicle-edit-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+    }
+
+    .vehicle-edit-modal-panel {
+      position: relative;
+      width: 460px;
+      max-width: 94vw;
+      max-height: 90vh;
+      overflow-y: auto;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.14);
+      box-sizing: border-box;
+    }
+
+    .vehicle-edit-modal-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .vehicle-edit-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-bottom: 16px;
+    }
+
+    .vehicle-edit-input,
+    .vehicle-edit-textarea {
+      width: 100%;
+      box-sizing: border-box;
+      background: var(--soft);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 14px;
+      color: var(--text);
+      font-family: inherit;
+      resize: vertical;
+    }
+
+    .vehicle-edit-input:focus,
+    .vehicle-edit-textarea:focus {
+      outline: 3px solid rgba(37, 99, 235, 0.30);
+      outline-offset: 1px;
+      border-color: var(--info-text);
+    }
+
+    .vehicle-edit-counter {
+      font-size: 12px;
+      color: var(--muted);
+      text-align: right;
+    }
+
+    .vehicle-edit-counter.invalid {
+      color: var(--ignore-text);
+      font-weight: 600;
+    }
+
+    .vehicle-edit-error {
+      font-size: 13px;
+      color: var(--ignore-text);
+      background: var(--ignore-bg);
+      border: 1px solid var(--ignore-text);
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin-bottom: 16px;
+    }
+
+    .vehicle-edit-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 4px;
+    }
 """

@@ -12,6 +12,34 @@ CANDIDATE_DRAWER_HTML = """
       <div id="candidateDrawerBody"></div>
     </div>
   </div>
+  <div id="vehicleEditModal" class="vehicle-edit-modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="vehicleEditModalTitle">
+    <div class="vehicle-edit-modal-backdrop" onclick="closeVehicleEditModal()"></div>
+    <div class="vehicle-edit-modal-panel">
+      <div class="vehicle-edit-modal-header">
+        <strong id="vehicleEditModalTitle">Edit vehicle</strong>
+        <button type="button" class="candidate-drawer-close" onclick="closeVehicleEditModal()">&#x2715; Close</button>
+      </div>
+
+      <label class="vehicle-edit-field">
+        <span>Name <span class="muted">(required)</span></span>
+        <input id="vehicleEditNameInput" class="vehicle-edit-input" type="text" maxlength="120" autocomplete="off" />
+        <span id="vehicleEditNameCount" class="vehicle-edit-counter">0/120</span>
+      </label>
+
+      <label class="vehicle-edit-field">
+        <span>Description / notes</span>
+        <textarea id="vehicleEditNotesInput" class="vehicle-edit-textarea" maxlength="500" rows="5"></textarea>
+        <span id="vehicleEditNotesCount" class="vehicle-edit-counter">0/500</span>
+      </label>
+
+      <div id="vehicleEditError" class="vehicle-edit-error" hidden></div>
+
+      <div class="vehicle-edit-actions">
+        <button type="button" class="small-action-button" onclick="closeVehicleEditModal()">Cancel</button>
+        <button id="vehicleEditSaveButton" type="button" class="small-action-button watch-action">Save</button>
+      </div>
+    </div>
+  </div>
   <button id="backToTopButton" class="back-to-top-button" type="button" aria-label="Back to top">
     &#x2191; Top
   </button>
