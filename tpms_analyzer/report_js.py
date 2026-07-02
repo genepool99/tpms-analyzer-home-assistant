@@ -8,6 +8,11 @@ JS_BLOCK = """    function getServiceBaseUrl() {
       }
 
       const parts = window.location.pathname.split("/").filter(Boolean);
+
+      if (parts.length >= 3 && parts[0] === "api" && parts[1] === "hassio_ingress") {
+        return "/" + parts.slice(0, 3).join("/");
+      }
+
       if (parts.length > 0) {
         return "/" + parts[0];
       }

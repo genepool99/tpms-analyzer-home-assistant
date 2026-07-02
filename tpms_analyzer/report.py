@@ -432,7 +432,7 @@ def html_start(generated_at):
   <link rel="apple-touch-icon" sizes="180x180" href="tiresignal-favicon-180.png">
   <style>{CSS_BLOCK}
 .brand-title {{ margin: 0; line-height: 1; }}
-.brand-logo {{ height: 52px; width: auto; display: block; }}
+.brand-logo {{ height: 90px; width: auto; display: block; }}
 @media (max-width: 480px) {{ .brand-logo {{ height: 36px; }} }}
 .header-meta {{ font-size: 12px; letter-spacing: 0.01em; margin-top: 6px; opacity: 0.75; }}
   </style>

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.9
+
+### Fixed
+
+- Fixed the Refresh Report button when TireSignal is opened through Home Assistant ingress or Nabu Casa.
+- Corrected client-side refresh URL construction so `/api/hassio_ingress/<token>/...` paths post to the add-on ingress refresh endpoint instead of Home Assistant's root `/api/refresh`.
+
+### Compatibility
+
+- Kept direct `:8099` access and `/local/rtl_433/tpms_report.html` behavior unchanged.
+- Kept backend routes, add-on slug, runtime paths, output filenames, health response service identifier, and `TPMS_*` environment variables unchanged.
+
 ## 0.3.8
 
 ### Changed
