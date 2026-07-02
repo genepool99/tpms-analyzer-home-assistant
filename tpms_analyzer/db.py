@@ -113,6 +113,11 @@ def ingest_log(conn):
                 stats["malformed"] += 1
                 continue
 
+            if isinstance(event.get("rows"), list) and "frames" in event:
+                stats["skipped"] += 1
+                stats["non_tpms"] += 1
+                continue
+
             if not is_tpms(event):
                 stats["skipped"] += 1
                 stats["non_tpms"] += 1

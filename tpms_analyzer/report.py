@@ -1355,6 +1355,8 @@ def raw_packets_section(lines):
             packet = json.loads(line)
 
             if isinstance(packet, dict):
+                if isinstance(packet.get("rows"), list) and "frames" in packet:
+                    continue
                 packet_time = packet.get("time", "")
                 model = packet.get("model", "")
                 packet_id = (
