@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.10
+
+### Fixed
+
+- Skipped rtl_433 protocol statistics/status packets during ingest so they no longer inflate the "TPMS lines without sensor ID" count.
+- Hid rtl_433 protocol statistics/status packets from the Raw Packets table so large protocol summary JSON blobs do not disrupt the report.
+
+### Compatibility
+
+- Kept database schema, runtime paths, output filenames, refresh behavior, and existing TPMS packet classification unchanged for normal sensor events.
+
 ## 0.3.9
 
 ### Fixed
